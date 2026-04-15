@@ -93,11 +93,17 @@ function HostLobbyContent() {
   const [musicMuted, setMusicMuted] = useState(false);
   const { startLobbyAmbience, stopLobbyAmbience, setLobbyAmbienceVolume } = useSoundEffects();
 
-  // Start on mount, stop on unmount
+  // Start ambience when in lobby, stop it when in game. Reacts to status
+  // changes so music resumes when the host returns from a finished game.
+  const isInGame = room?.status === 'playing' || room?.status === 'finished';
   useEffect(() => {
+    if (isInGame) {
+      stopLobbyAmbience();
+      return;
+    }
     startLobbyAmbience();
     return () => { stopLobbyAmbience(); };
-  }, [startLobbyAmbience, stopLobbyAmbience]);
+  }, [isInGame, startLobbyAmbience, stopLobbyAmbience]);
 
   const toggleMusic = () => {
     setMusicMuted(m => {
@@ -138,7 +144,6 @@ function HostLobbyContent() {
   };
   const handleStartGame = async () => {
     if (!gameMode) return;
-    stopLobbyAmbience(); // fade out before game audio kicks in
     await startGame({
       gameMode,
       roundCount,
