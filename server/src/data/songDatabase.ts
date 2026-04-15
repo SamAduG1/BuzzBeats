@@ -1,6 +1,6 @@
 import { Song } from '@shared/types/music';
 
-// ~502 curated songs across 9 genres (including K-Pop) and 7 decades.
+// ~602 curated songs across 9 genres (including K-Pop) and 7 decades.
 // previewUrl and albumArtUrl are empty — iTunes fills them at game time.
 
 export const songDatabase: Song[] = [
@@ -694,4 +694,120 @@ export const songDatabase: Song[] = [
   { id: 'kpop-013', title: 'Hype Boy', artist: 'NewJeans', album: 'New Jeans', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2022, isExplicit: false },
   { id: 'kpop-014', title: 'Next Level', artist: 'aespa', album: 'Savage', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2021, isExplicit: false },
   { id: 'kpop-015', title: 'Fancy', artist: 'TWICE', album: 'Fancy You', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2019, isExplicit: false },
+
+  // ── Pop (+13) ────────────────────────────────────────────────────────────────
+  { id: 'pop-086', title: 'As It Was', artist: 'Harry Styles', album: "Harry's House", albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2022, isExplicit: false },
+  { id: 'pop-087', title: 'Watermelon Sugar', artist: 'Harry Styles', album: 'Fine Line', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2019, isExplicit: false },
+  { id: 'pop-088', title: 'Anti-Hero', artist: 'Taylor Swift', album: 'Midnights', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2022, isExplicit: false },
+  { id: 'pop-089', title: 'Cruel Summer', artist: 'Taylor Swift', album: 'Lover', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2019, isExplicit: false },
+  { id: 'pop-090', title: 'Flowers', artist: 'Miley Cyrus', album: 'Endless Summer Vacation', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'pop-091', title: 'Die With a Smile', artist: 'Lady Gaga & Bruno Mars', album: 'Die With a Smile', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2024, isExplicit: false },
+  { id: 'pop-092', title: 'APT.', artist: 'ROSÉ & Bruno Mars', album: 'APT.', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2024, isExplicit: false },
+  { id: 'pop-093', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n\' Sweet', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2024, isExplicit: false },
+  { id: 'pop-094', title: 'Please Please Please', artist: 'Sabrina Carpenter', album: 'Short n\' Sweet', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2024, isExplicit: false },
+  { id: 'pop-095', title: 'Greedy', artist: 'Tate McRae', album: 'THINK LATER', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'pop-096', title: 'Bad Blood', artist: 'Taylor Swift', album: '1989', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2014, isExplicit: false },
+  { id: 'pop-097', title: 'Since U Been Gone', artist: 'Kelly Clarkson', album: 'Breakaway', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2004, isExplicit: false },
+  { id: 'pop-098', title: 'Toxic', artist: 'Britney Spears', album: 'In the Zone', albumArtUrl: '', previewUrl: '', genre: 'Pop', releaseYear: 2004, isExplicit: false },
+
+  // ── Hip-Hop/Rap (+13) ────────────────────────────────────────────────────────
+  { id: 'hh-078', title: 'Not Like Us', artist: 'Kendrick Lamar', album: 'Not Like Us', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2024, isExplicit: true },
+  { id: 'hh-079', title: 'HUMBLE.', artist: 'Kendrick Lamar', album: 'DAMN.', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2017, isExplicit: true },
+  { id: 'hh-080', title: 'Sicko Mode', artist: 'Travis Scott', album: 'ASTROWORLD', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2018, isExplicit: true },
+  { id: 'hh-081', title: 'goosebumps', artist: 'Travis Scott', album: 'Birds in the Trap Sing McKnight', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2016, isExplicit: true },
+  { id: 'hh-082', title: 'Rich Flex', artist: 'Drake & 21 Savage', album: 'Her Loss', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2022, isExplicit: true },
+  { id: 'hh-083', title: 'Way 2 Sexy', artist: 'Drake feat. Future & Young Thug', album: 'Certified Lover Boy', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2021, isExplicit: true },
+  { id: 'hh-084', title: 'Butterfly Effect', artist: 'Travis Scott', album: 'Birds in the Trap Sing McKnight', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2016, isExplicit: true },
+  { id: 'hh-085', title: 'Jumpman', artist: 'Drake & Future', album: 'What a Time to Be Alive', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2015, isExplicit: true },
+  { id: 'hh-086', title: 'Mask Off', artist: 'Future', album: 'Future', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2017, isExplicit: true },
+  { id: 'hh-087', title: 'Rockstar', artist: 'Post Malone feat. 21 Savage', album: 'beerbongs & bentleys', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2017, isExplicit: true },
+  { id: 'hh-088', title: 'Congratulations', artist: 'Post Malone feat. Quavo', album: 'Stoney', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2016, isExplicit: false },
+  { id: 'hh-089', title: 'Money in the Grave', artist: 'Drake feat. Rick Ross', album: 'Money in the Grave', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2019, isExplicit: true },
+  { id: 'hh-090', title: 'Big Energy', artist: 'Latto', album: '777', albumArtUrl: '', previewUrl: '', genre: 'Hip-Hop/Rap', releaseYear: 2021, isExplicit: true },
+
+  // ── Rock (+14) ───────────────────────────────────────────────────────────────
+  { id: 'rock-075', title: 'Bohemian Rhapsody', artist: 'Queen', album: 'A Night at the Opera', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1975, isExplicit: false },
+  { id: 'rock-076', title: 'We Will Rock You', artist: 'Queen', album: 'News of the World', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1977, isExplicit: false },
+  { id: 'rock-077', title: "Don't Stop Me Now", artist: 'Queen', album: 'Jazz', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1978, isExplicit: false },
+  { id: 'rock-078', title: 'Black Dog', artist: 'Led Zeppelin', album: 'Led Zeppelin IV', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1971, isExplicit: false },
+  { id: 'rock-079', title: 'Fortunate Son', artist: 'Creedence Clearwater Revival', album: 'Willy and the Poor Boys', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1969, isExplicit: false },
+  { id: 'rock-080', title: 'Kick Rocks', artist: 'Benson Boone', album: 'Beautiful Things', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 2024, isExplicit: false },
+  { id: 'rock-081', title: 'Beautiful Things', artist: 'Benson Boone', album: 'Beautiful Things', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 2024, isExplicit: false },
+  { id: 'rock-082', title: 'Losing My Religion', artist: 'R.E.M.', album: 'Out of Time', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1991, isExplicit: false },
+  { id: 'rock-083', title: 'Semi-Charmed Life', artist: 'Third Eye Blind', album: 'Third Eye Blind', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1997, isExplicit: false },
+  { id: 'rock-084', title: 'Mr. Jones', artist: 'Counting Crows', album: 'August and Everything After', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1993, isExplicit: false },
+  { id: 'rock-085', title: "Iris", artist: 'Goo Goo Dolls', album: 'Dizzy Up the Girl', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1998, isExplicit: false },
+  { id: 'rock-086', title: '1979', artist: 'The Smashing Pumpkins', album: 'Mellon Collie and the Infinite Sadness', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 1995, isExplicit: false },
+  { id: 'rock-087', title: 'Seven Nation Army', artist: 'The White Stripes', album: 'Elephant', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 2003, isExplicit: false },
+  { id: 'rock-088', title: 'Riptide', artist: 'Vance Joy', album: 'Dream Your Life Away', albumArtUrl: '', previewUrl: '', genre: 'Rock', releaseYear: 2013, isExplicit: false },
+
+  // ── R&B/Soul (+15) ───────────────────────────────────────────────────────────
+  { id: 'rnb-059', title: 'CUFF IT', artist: 'Beyoncé', album: 'RENAISSANCE', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2022, isExplicit: false },
+  { id: 'rnb-060', title: 'BREAK MY SOUL', artist: 'Beyoncé', album: 'RENAISSANCE', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2022, isExplicit: false },
+  { id: 'rnb-061', title: 'Leave the Door Open', artist: 'Bruno Mars, Anderson .Paak, Silk Sonic', album: 'An Evening with Silk Sonic', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2021, isExplicit: false },
+  { id: 'rnb-062', title: 'Smokin Out the Window', artist: 'Bruno Mars, Anderson .Paak, Silk Sonic', album: 'An Evening with Silk Sonic', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2021, isExplicit: true },
+  { id: 'rnb-063', title: 'Essence', artist: 'Wizkid feat. Tems', album: 'Made in Lagos (Deluxe)', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2020, isExplicit: false },
+  { id: 'rnb-064', title: 'Dandelion', artist: 'Tems', album: 'Born in the Wild', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2024, isExplicit: false },
+  { id: 'rnb-065', title: 'Snooze', artist: 'SZA', album: 'SOS', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2022, isExplicit: false },
+  { id: 'rnb-066', title: 'Nobody Gets Me', artist: 'SZA', album: 'SOS', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2022, isExplicit: false },
+  { id: 'rnb-067', title: 'Call Out My Name', artist: 'The Weeknd', album: 'My Dear Melancholy,', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2018, isExplicit: false },
+  { id: 'rnb-068', title: 'Often', artist: 'The Weeknd', album: 'Beauty Behind the Madness', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2014, isExplicit: true },
+  { id: 'rnb-069', title: 'Slow Motion', artist: 'Trey Songz', album: 'Trigga', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2014, isExplicit: true },
+  { id: 'rnb-070', title: 'No Scrubs', artist: 'TLC', album: 'FanMail', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 1999, isExplicit: false },
+  { id: 'rnb-071', title: 'Waterfalls', artist: 'TLC', album: 'CrazySexyCool', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 1995, isExplicit: false },
+  { id: 'rnb-072', title: 'Differences', artist: 'Ginuwine', album: 'The Life', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2001, isExplicit: false },
+  { id: 'rnb-073', title: 'Come & Get It', artist: 'Aaliyah', album: 'Aaliyah', albumArtUrl: '', previewUrl: '', genre: 'R&B/Soul', releaseYear: 2001, isExplicit: false },
+
+  // ── Alternative/Indie (+15) ──────────────────────────────────────────────────
+  { id: 'alt-055', title: 'Do I Wanna Know?', artist: 'Arctic Monkeys', album: 'AM', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2013, isExplicit: false },
+  { id: 'alt-056', title: 'R U Mine?', artist: 'Arctic Monkeys', album: 'AM', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2013, isExplicit: false },
+  { id: 'alt-057', title: '505', artist: 'Arctic Monkeys', album: 'Favourite Worst Nightmare', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2007, isExplicit: false },
+  { id: 'alt-058', title: 'Somebody That I Used to Know', artist: 'Gotye feat. Kimbra', album: 'Making Mirrors', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2011, isExplicit: false },
+  { id: 'alt-059', title: 'Ho Hey', artist: 'The Lumineers', album: 'The Lumineers', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2012, isExplicit: false },
+  { id: 'alt-060', title: 'Stubborn Love', artist: 'The Lumineers', album: 'The Lumineers', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2012, isExplicit: false },
+  { id: 'alt-061', title: 'Little Talks', artist: 'Of Monsters and Men', album: 'My Head Is an Animal', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2011, isExplicit: false },
+  { id: 'alt-062', title: 'Dog Days Are Over', artist: 'Florence + The Machine', album: 'Lungs', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2008, isExplicit: false },
+  { id: 'alt-063', title: 'You Know Me Too Well', artist: 'New Politics', album: 'A Bad Girl in Harlem', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2013, isExplicit: false },
+  { id: 'alt-064', title: 'Take Me to Church', artist: 'Hozier', album: 'Hozier', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2013, isExplicit: false },
+  { id: 'alt-065', title: 'Cherry Wine', artist: 'Hozier', album: 'Hozier', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2014, isExplicit: false },
+  { id: 'alt-066', title: 'Budapest', artist: 'George Ezra', album: 'Wanted on Voyage', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2014, isExplicit: false },
+  { id: 'alt-067', title: 'Barcelona', artist: 'George Ezra', album: 'Wanted on Voyage', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2014, isExplicit: false },
+  { id: 'alt-068', title: 'Ribs', artist: 'Lorde', album: 'Pure Heroine', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2013, isExplicit: false },
+  { id: 'alt-069', title: 'Green Light', artist: 'Lorde', album: 'Melodrama', albumArtUrl: '', previewUrl: '', genre: 'Alternative/Indie', releaseYear: 2017, isExplicit: false },
+
+  // ── EDM/Dance (+10) ──────────────────────────────────────────────────────────
+  { id: 'edm-048', title: 'Clarity', artist: 'Zedd feat. Foxes', album: 'Clarity', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2012, isExplicit: false },
+  { id: 'edm-049', title: 'Beautiful Now', artist: 'Zedd feat. Jon Bellion', album: 'True Colors', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2015, isExplicit: false },
+  { id: 'edm-050', title: 'Alive', artist: 'Sia', album: 'This Is Acting', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2015, isExplicit: false },
+  { id: 'edm-051', title: 'Cheap Thrills', artist: 'Sia', album: 'This Is Acting', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2016, isExplicit: false },
+  { id: 'edm-052', title: 'The Days', artist: 'Avicii feat. Robbie Williams', album: 'The Days / Nights', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2014, isExplicit: false },
+  { id: 'edm-053', title: 'Faded', artist: 'Alan Walker', album: 'Different World', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2015, isExplicit: false },
+  { id: 'edm-054', title: 'Alone', artist: 'Alan Walker', album: 'Different World', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2016, isExplicit: false },
+  { id: 'edm-055', title: 'Cola', artist: 'Camelphat & Elderbrook', album: 'Cola', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2017, isExplicit: false },
+  { id: 'edm-056', title: 'Piece of Your Heart', artist: 'Meduza feat. Goodboys', album: 'Piece of Your Heart', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2019, isExplicit: false },
+  { id: 'edm-057', title: 'Head & Heart', artist: 'Joel Corry feat. MNEK', album: 'Head & Heart', albumArtUrl: '', previewUrl: '', genre: 'EDM/Dance', releaseYear: 2020, isExplicit: false },
+
+  // ── Country (+10) ────────────────────────────────────────────────────────────
+  { id: 'cntry-045', title: 'Chicken Fried', artist: 'Zac Brown Band', album: 'The Foundation', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2008, isExplicit: false },
+  { id: 'cntry-046', title: 'Colder Weather', artist: 'Zac Brown Band', album: 'You Get What You Give', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2010, isExplicit: false },
+  { id: 'cntry-047', title: 'Take Your Time', artist: 'Sam Hunt', album: 'Montevallo', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2014, isExplicit: false },
+  { id: 'cntry-048', title: 'Body Like a Back Road', artist: 'Sam Hunt', album: 'Southside', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2017, isExplicit: false },
+  { id: 'cntry-049', title: 'Fast Car', artist: 'Luke Combs', album: 'Gettin\' Old', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2023, isExplicit: false },
+  { id: 'cntry-050', title: 'When It Rains It Pours', artist: 'Luke Combs', album: 'This One\'s for You', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2017, isExplicit: false },
+  { id: 'cntry-051', title: 'Whiskey Glasses', artist: 'Morgan Wallen', album: 'If I Know Me', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2018, isExplicit: false },
+  { id: 'cntry-052', title: '7 Summers', artist: 'Morgan Wallen', album: 'Dangerous: The Double Album', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2020, isExplicit: false },
+  { id: 'cntry-053', title: 'Texas Hold \'Em', artist: 'Beyoncé', album: 'Cowboy Carter', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2024, isExplicit: false },
+  { id: 'cntry-054', title: 'ii Most Wanted', artist: 'Beyoncé feat. Miley Cyrus', album: 'Cowboy Carter', albumArtUrl: '', previewUrl: '', genre: 'Country', releaseYear: 2024, isExplicit: false },
+
+  // ── K-Pop (+10) ──────────────────────────────────────────────────────────────
+  { id: 'kpop-016', title: 'Cupid (Twin Ver.)', artist: 'FIFTY FIFTY', album: 'The Beginning: Cupid', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'kpop-017', title: 'Spicy', artist: 'aespa', album: 'MY WORLD', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'kpop-018', title: 'OMG', artist: 'NewJeans', album: 'OMG', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'kpop-019', title: 'ETA', artist: 'NewJeans', album: 'Get Up', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2023, isExplicit: false },
+  { id: 'kpop-020', title: 'MIROH', artist: 'Stray Kids', album: 'Clé 1 : MIROH', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2019, isExplicit: false },
+  { id: 'kpop-021', title: 'CASE 143', artist: 'Stray Kids', album: 'MAXIDENT', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2022, isExplicit: false },
+  { id: 'kpop-022', title: 'Kill This Love', artist: 'BLACKPINK', album: 'Kill This Love', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2019, isExplicit: false },
+  { id: 'kpop-023', title: 'Shut Down', artist: 'BLACKPINK', album: 'BORN PINK', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2022, isExplicit: false },
+  { id: 'kpop-024', title: 'Butter', artist: 'BTS', album: 'Butter', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2021, isExplicit: false },
+  { id: 'kpop-025', title: 'Permission to Dance', artist: 'BTS', album: 'Butter', albumArtUrl: '', previewUrl: '', genre: 'K-Pop', releaseYear: 2021, isExplicit: false },
 ];

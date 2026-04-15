@@ -101,7 +101,7 @@ class RoomManager {
     return { room };
   }
 
-  private reconnectPlayer(code: string, player: Player, newSocketId: string): { room: Room; oldId: string } {
+  private reconnectPlayer(code: string, player: Player, newSocketId: string): { room: Room; oldSocketId: string } {
     const room = this.rooms.get(code)!;
     const oldId = player.id;
 
@@ -126,7 +126,7 @@ class RoomManager {
       assignments.set(newSocketId, teamId);
     }
 
-    return { room, oldId };
+    return { room, oldSocketId: oldId };
   }
 
   markPlayerDisconnected(socketId: string): { room: Room; player: Player } | null {
