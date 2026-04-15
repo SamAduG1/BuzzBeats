@@ -1,8 +1,8 @@
-# BuzzBeats - Comprehensive Scope & Requirements Document
+# BuzzBeats - Game Design & Architecture Reference
 
-> **Version:** 1.0
-> **Last Updated:** February 2026
-> **Status:** Pre-Development
+> **Version:** 2.0
+> **Last Updated:** April 2026
+> **Status:** v1.0 Feature-Complete — Pending Deployment
 
 ---
 
@@ -14,31 +14,30 @@
 4. [Game Flow](#4-game-flow)
 5. [Game Modes](#5-game-modes)
 6. [Scoring & Points System](#6-scoring--points-system)
-7. [Music Integration & Filters](#7-music-integration--filters)
-8. [Adult Mode & Kid-Friendly Mode](#8-adult-mode--kid-friendly-mode)
-9. [UI/UX Requirements](#9-uiux-requirements)
+7. [Music Integration](#7-music-integration)
+8. [Adult Mode](#8-adult-mode)
+9. [UI/UX & Sound Design](#9-uiux--sound-design)
 10. [Player & Room Management](#10-player--room-management)
-11. [Technical Requirements](#11-technical-requirements)
-12. [Development Phases](#12-development-phases)
-13. [Open Decisions & TBD](#13-open-decisions--tbd)
+11. [Technical Architecture](#11-technical-architecture)
+12. [Development Status](#12-development-status)
+13. [Deployment](#13-deployment)
+14. [Future Ideas](#14-future-ideas)
 
 ---
 
 ## 1. Project Overview
 
-**BuzzBeats** is a real-time multiplayer music trivia web application where players compete to prove their music knowledge. The app follows a Jackbox-style architecture: a host device (laptop/TV) runs the main game display while players join and interact from their phones via a room code or QR code.
+**BuzzBeats** is a real-time multiplayer music trivia web app. A host device (laptop or TV) runs the main game display while players join and interact from their phones via a room code.
 
 ### Core Concept
-- Players compete solo or in teams to guess songs, artists, and recall lyrics
-- Multiple game modes offer variety and replayability
-- Customizable filters let players tailor the experience (genre, era, difficulty)
+- Players compete solo or in teams to guess songs and artists from audio clips
+- 5 distinct game modes with different rulesets and energy levels
 - Adult mode adds optional drinking game suggestions for party settings
-- Kid-friendly mode provides the same experience without adult content
+- Dark neon/cyberpunk visual theme (cyan `#00f0ff` + magenta `#ff00e5`)
 
 ### Target Audience
-- Friend groups, party-goers, family game nights
+- Friend groups, party-goers, casual game nights
 - Music enthusiasts of all ages
-- Casual and competitive players alike
 
 ---
 
@@ -50,470 +49,517 @@ BuzzBeats uses a **dual-interface architecture** inspired by Jackbox Games:
 
 #### Host Screen (Laptop / TV / Shared Display)
 - Runs the full web application in a browser
-- Displays the shared game state: current round, song playing, timer, scores, visuals
-- Audio plays exclusively from this device
-- The host device does **NOT** participate as a player
-- Designed for larger screens with rich visuals and animations
+- Displays shared game state: round number, song playing, timer, scores, visuals
+- **All audio plays exclusively from this device**
+- The host does NOT participate as a player
+- Synthesized sound effects and ambient lobby music via Web Audio API
 
 #### Player Controller (Phone Browser)
-- Players access via their phone's browser (URL entry or QR code scan)
-- Lightweight, touch-optimized interface
-- Used for: buzzing in, submitting answers, viewing personal score
+- Players access via phone browser (URL or QR code scan)
+- Touch-optimized: buzz-in button, answer submission, score display
 - No audio playback on player devices
-- Minimal data usage and battery-friendly
 
 #### Connection Flow
-1. Host opens BuzzBeats on a laptop/TV browser
-2. Host creates a game room -> receives a **room code** and **QR code**
-3. Players scan QR code or type the site URL on their phone
-4. Players enter the room code and choose a display name
-5. Host sees all connected players in the lobby
-6. Host configures game settings (mode, filters, rounds, adult/kid mode)
-7. Host starts the game
-8. Game plays out in real-time with synchronized state
+1. Host opens BuzzBeats on a laptop/TV browser → creates a room → gets a **4-character room code** + QR code
+2. Players scan QR or type site URL on phone → enter room code + display name
+3. Host sees connected players in lobby, configures settings
+4. Host starts game → real-time synchronized game loop begins
 
 ---
 
 ## 3. Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | React (Next.js) | UI framework, server-side rendering |
-| Styling | Tailwind CSS | Responsive, modern UI design |
-| Real-Time | Socket.io | WebSocket connections for live game state |
-| Backend | Node.js + Express | API server, game logic, room management |
-| Music API | Spotify Web API | Song data, previews, metadata, filtering |
-| Lyrics API | Genius / Musixmatch API | Lyric verification for Lyric Word Match mode |
-| Database | Supabase (PostgreSQL) | User accounts, leaderboards, game history |
-| Hosting (Frontend) | Vercel | Frontend deployment |
-| Hosting (Backend) | Railway or Render | WebSocket server deployment |
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Frontend | Next.js 15 (App Router) | `use client` for socket components |
+| Styling | Tailwind CSS v4 | CSS `@theme` directive (no JS config) |
+| Real-Time | Socket.io | All game state synced via WebSocket |
+| Backend | Node.js + Express | Game logic, room management |
+| Music API | iTunes Search API | Free, no auth required. 30s previews. |
+| Lyrics API | lyrics.ovh (primary) / Musixmatch (fallback) | For Name That Lyric mode clue display |
+| Audio | Web Audio API | Synthesized SFX + ambient music — zero audio files |
+| Hosting (Frontend) | Vercel | Pending deployment |
+| Hosting (Backend) | Railway | Pending deployment |
+
+**Not used:** Spotify (deprecated in favor of iTunes), Supabase (no user accounts in v1)
 
 ---
 
 ## 4. Game Flow
 
-### General Round Structure (Applies to All Modes)
+### General Round Structure
 
-1. **Pre-Round**: Host screen displays the round number and mode-specific setup
-2. **Active Round**: A prompt is presented (song clip, word, etc.) and players respond
-3. **Buzzer/Submission Phase**: Players buzz in or submit answers within a time limit
-4. **Reveal Phase**: Correct answer is revealed, points are awarded
-5. **Scoreboard Update**: Updated scores are displayed on the host screen
-6. **Adult Mode Prompt** (if enabled): Drinking game suggestion is displayed
-7. **Next Round or Game End**: Repeat or show final standings
+```
+PRE_ROUND → PLAYING → BUZZING → REVEAL → SCOREBOARD → (loop) → GAME_OVER
+```
 
-### Configurable Game Settings (Set by Host Before Starting)
-- **Game Mode**: Select which mode to play
-- **Number of Rounds**: How many rounds per game (e.g., 10, 15, 20, custom)
-- **Time Per Round**: How long players have to answer (e.g., 10s, 15s, 30s)
-- **Filters**: Genre, era/date range, difficulty (see Section 7)
-- **Team or Solo**: Free-for-all or team-based play
-- **Adult or Kid-Friendly Mode**: Toggle drinking game features on/off
+**PRE_ROUND**: Host screen shows round number, mode hint, and (in Snippet) which sub-round clip length is coming.
+
+**PLAYING**: Song clip plays (or word/lyric displayed). Timer counts down. Players can buzz in at any time. Timer bar animates on host screen with equalizer visualization.
+
+**BUZZING**: First player to buzz in locks the buzzer. A 15s answer window opens. Other players see who buzzed. Host screen shows buzzed-in player's name. Player submits song title and/or artist on their phone.
+
+**REVEAL**: Correct answer shown with album art. Points awarded. Drinking prompt shown (if Adult Mode on). Winner highlighted.
+
+**SCOREBOARD**: Full leaderboard shown after each round. Rank changes animated.
+
+**GAME_OVER**: Final standings with winner celebration. Play Again option returns to lobby.
+
+### Game Settings (Configured by Host Before Starting)
+
+| Setting | Options |
+|---------|---------|
+| Game Mode | Classic, Speed, Snippet, Elimination, Lyric Word Match |
+| Rounds | 5–30 (not shown in Elimination: Last One Standing sub-mode) |
+| Timer | 15s or 30s per round (Classic/Lyric Word Match) |
+| Genre | Pop, Hip-Hop/Rap, Rock, R&B/Soul, Country, EDM/Dance, Alternative/Indie, Latin, All |
+| Era | Pre-2000s, 2000s, 2010s, 2020s, All |
+| Teams | Free-for-all or 2–4 teams |
+| Adult Mode | On/Off — enables drinking prompts |
 
 ---
 
 ## 5. Game Modes
 
-### Mode 1: Classic Buzz-In (MVP Mode)
+### Mode 1: Classic
 
-**Concept**: A song clip plays on the host device. First player/team to buzz in and correctly identify the song and/or artist earns points.
+**Concept**: A 30-second song clip plays. First player/team to buzz in and correctly identify the song and/or artist earns points.
 
 **Rules**:
-- A 30-second song preview plays from the host device
-- Players can buzz in at any time during playback
-- First player to buzz in gets to answer
-- Player submits their answer (song title, artist, or both)
-- If correct: points awarded based on what they got right (see scoring)
-- If incorrect: the buzzer reopens for remaining players
-- Round ends when someone answers correctly or time runs out
+- Song clip plays from host device for up to 30 seconds
+- Any player can buzz in at any time during playback
+- First to buzz gets a 15-second answer window
+- If correct: points awarded, round ends
+- If incorrect: buzzer reopens, song resumes playing for remaining players
+- Round ends when someone gets it right or the clip runs out
 
-**Variations to Consider**:
-- "Blind Buzz" - Song clip starts very quietly and gradually gets louder
-- "Quick Draw" - Only 10 seconds of the clip plays
+**Timer**: Configurable 15s or 30s clip window
 
 ---
 
-### Mode 2: Lyric Word Match
+### Mode 2: Speed
 
-**Concept**: A random word is displayed on the host screen. First player/team to name a real song lyric containing that word earns the point.
+**Concept**: Rapid-fire version of Classic. Shorter clips, faster transitions, keeps energy high.
 
 **Rules**:
-- A word is randomly selected from a curated word bank (see below)
-- Players buzz in when they think of a lyric containing that word
-- Player states/submits their lyric and the song it's from
-- **Verification uses a hybrid approach**:
-  - Other players/teams vote on whether the answer is legitimate
-  - If challenged, a lyrics API (Genius/Musixmatch) is used as the final judge
-  - This prevents unfair rejections for minor inaccuracies (e.g., getting 90% of the lyric right)
-- If correct: 1 point awarded
-- If incorrect or challenged and disproven: no point, buzzer reopens
+- Song clip plays for **10 seconds** (not 30)
+- Buzzer window is **10 seconds**
+- Auto-advances immediately after answer or timeout
+- Scoring identical to Classic
 
-**Word Bank Design**:
-Words are categorized into difficulty tiers and pulled from a curated database:
-
-| Tier | Examples | Criteria |
-|------|----------|----------|
-| Easy | love, fire, night, dance, baby, heart, rain, dream | Appears in hundreds of songs, most people can recall one quickly |
-| Medium | thunder, diamond, highway, shadow, villain, ocean, crown, ghost | Appears in many songs but requires more thought |
-| Hard | chandelier, silhouette, avalanche, masquerade, kaleidoscope, velvet | Appears in songs but takes real music knowledge to recall |
-
-**Word Filtering Rules**:
-- Exclude stop words: the, is, and, a, an, or, but, in, on, at, to, for, of, it, etc.
-- Exclude extremely obscure words that appear in fewer than ~5 known songs
-- Words can be sourced by analyzing common lyrics databases and filtering appropriately
+*Internally extends ClassicMode — same logic, different durations.*
 
 ---
 
-### Mode 3: Speed Round
+### Mode 3: Snippet
 
-**Concept**: Rapid-fire version of Classic Buzz-In. Short clips, fast timer, keeps the energy high.
+**Concept**: The same song is played 4 times with progressively longer clips. Guess earlier = more points.
+
+**Sub-round clip lengths**: 2s → 5s → 10s → 20s
+
+**Points per sub-round**: 4 → 3 → 2 → 1
 
 **Rules**:
-- Song clip plays for only 5-10 seconds
-- Shorter answer window (e.g., 10 seconds total)
-- Auto-advances to next round immediately after answer or timeout
-- Points same as Classic Buzz-In
-- Best for late-game energy or as a tiebreaker mode
+- Each song has up to 4 sub-rounds
+- A clip plays. Players buzz in if they know it.
+- First correct answer at any sub-round ends that song and advances to the next
+- If all 4 sub-rounds pass with no correct answer, song is skipped
+- Round count = number of full songs attempted
+
+**Host screen**: Shows "Clip 1 of 4 — 2 seconds" etc. Sub-round transition has its own animated phase.
 
 ---
 
 ### Mode 4: Elimination
 
-**Concept**: Wrong answer or failure to answer = you're eliminated. Last player/team standing wins. Designed for larger groups with higher stakes.
+**Concept**: Wrong answer = permanent elimination. High stakes, dramatic pacing.
 
-**Player Limits**: Min 4, Max 16 (solo) | Teams scale accordingly
+**Sub-Modes (Host selects before starting)**:
 
-**Sub-Modes** (Host selects before starting):
+#### Last One Standing
+- No fixed round count — keeps going until one player remains
+- If you buzz in wrong: you're **permanently eliminated** (shown on host with animation)
+- If nobody buzzes before timer: lowest-score player is eliminated (no-buzz penalty)
+- Last two players eliminated in the same round → **Sudden Death** tiebreaker
+- Always produces exactly one winner
 
-#### Option A: Last One Standing
-- No fixed round count. Rounds keep going until one player remains.
-- If you buzz in and answer wrong, you're eliminated.
-- If no one buzzes in before the timer, the player with the lowest cumulative score is eliminated.
-- If the last two players both get eliminated in the same round, a sudden death round between them settles it.
-- Always produces exactly one winner.
+#### Fixed Rounds
+- Set number of rounds; elimination rules apply throughout
+- Survivors at the end: highest score wins
+- Tied survivors → **Sudden Death** round between them
 
-#### Option B: Fixed Rounds
-- Set number of rounds (e.g., 25). Elimination rules apply throughout.
-- If multiple players survive all rounds, the one with the highest score wins.
-- If tied, a sudden death round between tied survivors determines the winner.
-- Always one winner.
+**Last Chance (Comeback Mechanic)**:
+- Triggers **once** when half the starting players have been eliminated
+- All eliminated players get one final chance: buzz in and answer correctly = back in the game
+- Wrong answer = permanently out
+- Special stinger + host screen overlay marks this moment
 
-**Last Chance Round (Comeback Mechanic)**:
-- A single dedicated "Last Chance Round" triggers once half the players have been eliminated.
-- All eliminated players get ONE shot to buzz in and answer correctly.
-- Get it right: you're back in the game. Get it wrong: you're done for good.
-- Creates a dramatic moment with special visuals on the host screen.
-- Only happens once per game.
+**Sudden Death (Tiebreaker)**:
+- Special audio sting + pulsing visual effect
+- Standard buzz-in rules, first correct answer wins
+- Used for both End-of-game ties and Last-Two-Standing scenarios
 
-**Elimination Drinking Game (Adult Mode)**:
-- Preset: 2 drinks per player
-- Each player has 2 "pool drinks" assigned at the start (separate from penalties).
-- When eliminated, you drink 2 penalty drinks.
-- Your 2 pool drinks transfer to the winner's prize pool.
-- Winner distributes the entire pool to other players as they see fit.
-- Example: 8 players = 16 pool drinks. Winner hands out all 16.
-- Host screen displays the prize pool growing as players are eliminated.
+**Adult Mode with Elimination**:
+- Each eliminated player "drinks" their pool amount (2 drinks each)
+- Prize pool grows as players are eliminated (displayed on host screen)
+- Winner distributes entire pool
 
 ---
 
-### Mode 5: Snippet Challenge
+### Mode 5: Lyric Word Match
 
-**Concept**: The song clip starts extremely short (1-2 seconds) and gradually gets longer each sub-round. Guess earlier for more points.
+**Concept**: A word is displayed on the host screen. Players buzz in when they think of a song lyric containing that word. Non-audio mode — no song clips play.
+
+**Word bank**: 60 curated words across Easy / Medium / Hard tiers
+
+| Tier | Example Words |
+|------|--------------|
+| Easy | love, fire, night, dance, baby, heart, rain, dream |
+| Medium | thunder, diamond, highway, shadow, ocean, crown, ghost |
+| Hard | chandelier, silhouette, avalanche, masquerade, velvet |
 
 **Rules**:
-- Round 1: 1-2 second clip plays
-- Round 2: 5 second clip plays (same song)
-- Round 3: 10 second clip plays (same song)
-- Round 4: 20 second clip plays (same song)
-- Points decrease with each sub-round (e.g., 4 points -> 3 -> 2 -> 1)
-- First correct answer at any sub-round ends that song and moves to the next
-- Rewards deep music knowledge and quick recognition
+- A word is shown. Players buzz in when they have a lyric.
+- Buzzed-in player submits a song title containing that word
+- Host marks correct/incorrect (host judges the answer)
+- Correct: 1 point + new word
+- Incorrect: buzzer reopens for others
+- Round ends when correct answer given or time runs out
 
----
+**Answer verification**: Fuzzy match on song title against the 192+ song database (same engine as Classic mode). Server checks if the submitted title reasonably matches any song in the database that contains the displayed word in its lyrics cache.
 
-### Future Game Mode Ideas (Post-MVP Brainstorm)
-- **Name That Playlist**: Given 3-5 songs, guess what genre/decade/theme connects them
-- **Finish the Lyric**: A lyric is displayed with a blank, fill in the missing word(s)
-- **Artist Roulette**: All songs come from one mystery artist, guess who it is
-- **Versus Mode**: 1v1 head-to-head bracket tournament
-- **Album Cover**: A random song from an album plays while the album cover is displayed on the host screen. Players guess the album name and artist. Requires album art API (iTunes Search API returns `artworkUrl100` which can be upscaled). Priority: post-MVP, after all current modes are stable.
+**Lyrics**: Pre-cached from lyrics.ovh + Musixmatch. Only songs with cached lyrics are eligible for this mode.
 
 ---
 
 ## 6. Scoring & Points System
 
-### Classic Buzz-In / Speed Round / Snippet Challenge Scoring
+### Standard Scoring (Classic, Speed, Lyric Word Match)
 
 | Achievement | Points |
 |------------|--------|
 | Correct artist only | 1 point |
 | Correct song title only | 2 points |
 | Both artist and song title | 3 points |
+| Lyric Word Match correct song | 1 point |
 
-### Lyric Word Match Scoring
+### Snippet Scoring
 
-| Achievement | Points |
-|------------|--------|
-| Valid lyric with correct song attribution | 1 point |
-
-### Snippet Challenge Bonus Scoring
-
-| Sub-Round Guessed | Points Multiplier |
-|-------------------|-------------------|
-| 1st snippet (1-2s) | 4 points (base x2) |
-| 2nd snippet (5s) | 3 points |
-| 3rd snippet (10s) | 2 points |
-| 4th snippet (20s) | 1 point |
+| Sub-Round | Points Awarded |
+|-----------|---------------|
+| 1st clip (2s) | 4 points |
+| 2nd clip (5s) | 3 points |
+| 3rd clip (10s) | 2 points |
+| 4th clip (20s) | 1 point |
 
 ### Answer Verification
-- **Fuzzy matching** should be implemented for typed answers
-  - "Kendrick" should match "Kendrick Lamar"
-  - Minor typos should be forgiven (e.g., "Rhianna" vs "Rihanna")
-  - Common abbreviations accepted (e.g., "RHCP" for "Red Hot Chili Peppers")
-  - Nicknames of artists accepted (e.g., "Drizzy" for "Drake" or Riri for "Rihanna")
-- **For Lyric Word Match**: Hybrid verification (player vote + API challenge system)
 
-### Win Conditions
-- **Standard**: Most points after all rounds wins
-- **Elimination**: Last player/team standing
-- **Tiebreaker**: Can trigger a sudden-death Speed Round
+Fuzzy matching is implemented server-side using normalized string comparison:
+- Case-insensitive
+- Punctuation stripped
+- Common abbreviations handled (e.g. "RHCP" → Red Hot Chili Peppers)
+- Minor typos tolerated (Levenshtein distance-based)
+- Artist first name accepted (e.g. "Kendrick" matches "Kendrick Lamar")
 
----
+### Drinking Prompts (Adult Mode)
 
-## 7. Music Integration & Filters
-
-### Spotify Web API Integration
-
-**Approach**: The Spotify API is used on the **backend only**. Players do NOT need Spotify accounts.
-
-- The app uses Spotify's API to fetch song previews (30-second clips), metadata, and filtering data
-- A server-side Spotify developer account handles API authentication
-- Song previews are streamed to the host device only
-
-**Key Spotify Data Used**:
-- Song title and artist name (for answer verification)
-- Album art (for host screen display during reveal)
-- Genre tags (for filtering)
-- Release date (for era filtering)
-- Popularity score (for difficulty filtering)
-
-### Filter Options (Configurable by Host)
-
-| Filter | Description | Examples |
-|--------|------------|---------|
-| Genre | Single or multiple genres | Pop, Hip-Hop, Rock, R&B, Country, EDM, etc. |
-| Era / Date Range | Songs from a specific time period | 2010-present, 1990s, 1980-2000, all time |
-| Difficulty | Based on song popularity metrics | Easy (top hits), Medium (well-known), Hard (deep cuts) |
-| No Filter | All genres and eras are fair game | Complete randomization |
-| Custom Playlist | Use a specific Spotify playlist as the pool | Host pastes a Spotify playlist link |
-
-### Song Randomization Logic
-- Songs are pulled from Spotify based on active filters
-- A randomization engine ensures no repeats within a game session
-- Songs are pre-fetched in batches to avoid mid-game loading delays
-- Fallback logic if a preview clip is unavailable for a selected song
+Displayed on host screen after REVEAL. Three pools of prompts:
+- **FFA pool**: generic prompts for free-for-all games
+- **Team pool**: team-targeted prompts
+- **Elimination pool**: elimination-specific prompts (e.g. "eliminated player drinks")
 
 ---
 
-## 8. Adult Mode & Kid-Friendly Mode
+## 7. Music Integration
 
-### Mode Toggle
-- Selected by the host during game setup
-- Affects only the **drinking game suggestions** and potentially the **song content filter**
+### iTunes Search API
 
-### Adult Mode Features
-Drinking game suggestions appear on the host screen after each round, tied to the scoring outcome:
+- Free, no API key, no user auth required
+- Returns 30-second preview URLs + album art + metadata
+- Called at game start for each song batch (songs pre-fetched, not mid-round)
+- Fallback: if a preview URL can't be fetched, song is skipped and another is drawn
 
-**Example Drinking Game Rules** (displayed as fun prompts, not requirements):
-- "Losing team drinks!"
+### Song Database
+
+~367 curated songs across 8 genres and 6 decades (stored in `server/src/data/songDatabase.ts`):
+
+| Genre | Count |
+|-------|-------|
+| Pop | ~64 |
+| Hip-Hop/Rap | ~54 |
+| Rock | ~53 |
+| R&B/Soul | ~43 |
+| Country | ~39 |
+| EDM/Dance | ~39 |
+| Alternative/Indie | ~40 |
+| Latin | ~35 |
+| **Total** | **~367** |
+
+Songs have `isExplicit` flag — Adult Mode off hides explicit songs from the pool.
+
+### Filtering
+
+Host can filter the pool by:
+- **Genre**: one of the 8 above, or All
+- **Era**: Pre-2000s / 2000s / 2010s / 2020s / All
+
+Songs are drawn randomly from the filtered pool. No repeat within a single game session.
+
+### Lyrics (Name That Lyric / Lyric Word Match)
+
+- Primary: **lyrics.ovh** (free, no key needed)
+- Fallback: **Musixmatch** (requires `MUSIXMATCH_API_KEY` env var — free Basic tier, 2,000 calls/day)
+- Results are disk-cached (`server/src/data/lyricsCache/`)
+- Only songs with cached lyrics are eligible for Lyric Word Match
+
+---
+
+## 8. Adult Mode
+
+Selected by host in lobby. Affects:
+1. **Song pool**: explicit songs are excluded when Adult Mode is OFF
+2. **Drinking prompts**: shown on host screen after each REVEAL when ON
+
+Prompts are suggestions only — displayed as playful text. The app does not track or enforce drinking.
+
+Example prompts:
+- "Losing team takes a sip!"
 - "Winner picks someone to drink!"
-- "Everyone who didn't buzz in takes a sip!"
-- "Wrong answer? That's a drink!"
-- "Perfect round (artist + song)? Hand out 3 drinks!"
-- "No one got it? Everyone drinks!"
-
-These are **suggestions only** - displayed as playful text on the host screen. The app does not track or enforce drinking.
-
-### Kid-Friendly Mode Features
-- Identical gameplay with zero drinking references
-- Optionally: filters out songs with explicit content tags (Spotify provides this metadata)
-- Family-friendly celebration messages instead (e.g., "Great round!" "Music master!")
+- "Nobody guessed it? Everyone drinks!"
+- "First buzz-in wrong? That's on you — drink!"
 
 ---
 
-## 9. UI/UX Requirements
+## 9. UI/UX & Sound Design
 
-### General Design Direction
-- **Primary mode: Dark theme** (suits the party/game-show vibe)
-- Optional light mode can be added later but is not a priority
-- Visual style should feel energetic, modern, and game-show inspired
-- Smooth animations for buzzer hits, score reveals, round transitions
-- Color palette and exact theme TBD during design phase (modern vs retro vs neon, etc.)
+### Visual Theme
+- **Dark neon/cyberpunk**: background `#0a0a0f`, primary cyan `#00f0ff`, accent magenta `#ff00e5`
+- Font: Orbitron (display), system sans-serif (body)
+- Glowing borders, scan-line effects, animated timer bars
+- Equalizer visualization during song playback
 
-### Host Screen (Laptop/TV Display)
+### Sound Effects (Web Audio API — zero audio files)
 
-| Screen | Key Elements |
-|--------|-------------|
-| **Landing Page** | App logo, "Create Game" button, brief tagline |
-| **Room Lobby** | Room code (large), QR code, list of connected players, game settings panel, "Start Game" button |
-| **Active Game** | Current round number, timer, game-mode-specific content (song clip visualizer, word display, etc.) |
-| **Answer Reveal** | Correct answer with album art, who got it right, points awarded |
-| **Scoreboard** | Running scores for all players/teams, updated after each round |
-| **Drinking Prompt** | (Adult mode only) Fun drinking suggestion displayed briefly |
-| **Game Over** | Final standings, winner celebration animation, "Play Again" option |
+All sounds are synthesized in-browser. Preview at `/sounds`.
 
-### Player Controller (Phone Screen)
+| Sound | Trigger |
+|-------|---------|
+| Buzzer Press | Player hits the buzz button |
+| Correct Answer | Host marks answer correct |
+| Wrong Answer | Host marks answer wrong (or time runs out) |
+| Tick | Final 5 seconds of timer countdown |
+| Fanfare | Game over / winner revealed |
+| Sudden Death Stinger | Entering sudden death / tiebreaker |
+| Sudden Death Pulse | Looping drone during sudden death |
+| Elimination Reveal | Player eliminated animation |
+| Last Chance Stinger | Last Chance phase begins |
+| Lobby Ambience | Synthwave loop in host lobby (start/stop/mute) |
 
-| Screen | Key Elements |
-|--------|-------------|
-| **Join Screen** | Room code input field, QR code scanner option, display name input |
-| **Lobby** | "Waiting for host to start..." status, list of other players |
-| **Buzzer Screen** | Large, prominent buzz-in button (easy to tap), timer display |
-| **Answer Input** | Text field(s) for song title / artist name, submit button |
-| **Lyric Input** | (Lyric Word Match) Text field for lyric, song name field |
-| **Vote Screen** | (Lyric Word Match challenge) Accept / Reject buttons for judging answers |
-| **Personal Score** | Player's current score and rank |
-| **Game Over** | Final rank, personal stats |
-
-### Responsive Design Notes
-- Host screen: Optimized for 1080p+ displays, should look great on TVs
-- Player controller: Mobile-first, thumb-friendly, large tap targets
-- Player controller must work across iOS Safari, Android Chrome, and other mobile browsers
-- Minimal data transfer to player devices to keep things snappy
+### Lobby Ambience
+- Plays automatically when host enters the lobby
+- Stops with 2.5s fade when game starts
+- Mutable via speaker button in header (volume ramp, scheduler keeps running)
+- 128 BPM synthwave: kick/snare/hi-hat rhythm section, walking bass, resonant arp, atmosphere pad
+- Synthesized via lookahead scheduler (25ms interval, 120ms lookahead) for timing accuracy
 
 ---
 
 ## 10. Player & Room Management
 
 ### Room System
-- Rooms are created by the host and identified by a short, easy-to-type code (e.g., 4-6 alphanumeric characters)
-- QR code is generated that links directly to the join page with the room code pre-filled
-- Rooms are destroyed after the game ends or after a period of inactivity
+- 4-character alphanumeric room code (e.g. `A3K9`)
+- QR code displayed in lobby — links directly to join page with code pre-filled
+- Room is destroyed on game end or after inactivity timeout
 
 ### Player Limits
 
-| Play Style | Min Players | Max Players |
-|-----------|-------------|-------------|
+| Mode | Min | Max |
+|------|-----|-----|
 | Free-for-all | 2 | 10 |
-| Team Mode | 4 (2 per team min) | 32 (up to 4 teams, up to 8 per team) |
+| Team Mode | 4 | 32 (up to 4 teams, up to 8 per team) |
+
+### Teams
+- Host drags players into teams in lobby (drag-and-drop via @dnd-kit)
+- Tap-to-cycle also supported (mobile-friendly)
+- 2–4 teams, named Team 1 / Team 2 / etc.
 
 ### Disconnection Handling
-- If a player disconnects, they can rejoin using the **same room code**
-- Their score and state are preserved
-- Host screen shows a "disconnected" indicator next to the player's name
-- If a player doesn't rejoin within a configurable timeout, they are removed from the game
-- Game continues with remaining players (does not pause for disconnects)
-
-### User Accounts (Future Feature)
-- MVP: No accounts required. Players just enter a display name.
-- Future: Optional accounts for tracking stats, global leaderboards, friend lists
+- Player disconnects → "disconnected" indicator on host screen
+- **60-second auto-kick timer** if player doesn't rejoin
+- Player can rejoin with same room code within the window; score and state preserved
+- Game continues without pausing for disconnects
+- **Socket ID self-healing**: if a player's socket ID changes on reconnect and they try to buzz in, the server matches by display name and relinks their ID — prevents stale-ID buzzer failures
 
 ---
 
-## 11. Technical Requirements
+## 11. Technical Architecture
 
-### Real-Time Communication
-- **Socket.io** handles all real-time game state synchronization
-- Events include: player joins, buzzer press, answer submission, round advance, score update, game end
-- Buzzer priority is determined **server-side** to prevent race conditions (server timestamp is authoritative)
-- Latency should be <100ms for buzzer fairness
+### State Machine (Server-Side)
 
-### API Rate Limiting
-- Spotify API has rate limits; songs should be pre-fetched and cached
-- Lyrics API calls should be batched or cached where possible
-- Implement server-side caching layer for frequently used song data
+GameManager owns the canonical game state. Phases:
 
-### Security Considerations
-- Room codes should be random and non-sequential to prevent guessing
-- No sensitive data stored on player devices
-- Spotify API credentials stored server-side only, never exposed to clients
-- Input sanitization on all player-submitted text (answers, display names)
-- Rate limiting on buzzer presses to prevent spam
+```
+PRE_ROUND → PLAYING → BUZZING → REVEAL → SCOREBOARD → PRE_ROUND (loop)
+                                                     → GAME_OVER
+```
 
-### Performance Targets
-- Host screen: 60fps animations, smooth transitions
-- Player controller: <1 second load time, instant buzzer response
-- Song preview: Pre-buffered to prevent playback delays
-- WebSocket connection: Auto-reconnect on drop with state recovery
+Elimination extras:
+```
+PLAYING → "last-chance" → REVEAL (→ "elimination-reveal") → SCOREBOARD
+```
+
+Snippet extras:
+```
+PLAYING → BUZZING/REVEAL → "sub-round-transition" → PLAYING (next clip)
+```
+
+### Strategy Pattern (Game Modes)
+
+Each game mode implements the `GameMode` interface (`server/src/game/modes/GameMode.ts`):
+
+```typescript
+interface GameMode {
+  getConfig(): ModeConfig;
+  initState(settings, songs): ModeGameState;
+  songsNeeded(settings): number;       // 0 for non-audio modes
+  buildClientState(game, roomCode): Partial<ClientGameState>;
+  onRoundStart(game, io, roomCode): void;
+  onBuzzerPress(game, playerId): BuzzerResult;
+  onAnswerSubmit(game, playerId, answer, songDb): AnswerResult;
+  onRoundEnd(game, io, roomCode): RoundEndResult;
+}
+```
+
+Mode instances created via `modeFactory.ts`.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `server/src/game/GameManager.ts` | State machine, round loop, phase transitions |
+| `server/src/game/modes/` | GameMode interface + 5 mode implementations |
+| `server/src/rooms/RoomManager.ts` | Room state, disconnect/reconnect, 60s auto-kick |
+| `server/src/socket/handlers/` | Socket event handlers (room, connection, game) |
+| `server/src/data/songDatabase.ts` | ~367 curated songs |
+| `server/src/data/drinkingPrompts.ts` | Drinking prompt pools |
+| `server/src/data/wordBank.ts` | 60 words for Lyric Word Match |
+| `shared/types/game.ts` | GameSettings, ClientGameState, GamePhase |
+| `shared/types/gameMode.ts` | GameModeId union, AVAILABLE_GAME_MODES |
+| `client/src/context/RoomContext.tsx` | Client state + socket event listeners |
+| `client/src/hooks/useSoundEffects.ts` | All synthesized SFX + lobby ambience |
+| `client/src/hooks/useAudioPlayer.ts` | iTunes preview playback with Web Audio fade-out |
+| `client/src/components/host/GameScreen.tsx` | Host game view — audio management, phase routing |
+| `client/src/components/host/PlayingDisplay.tsx` | Timer bars, equalizer, word display (purely visual) |
+| `client/src/components/host/EliminationOverlay.tsx` | Elimination reveal + Last Chance UI |
+| `client/src/components/player/GameScreen.tsx` | Player view — buzzer, eliminated states |
+| `client/src/app/host/lobby/page.tsx` | Lobby with settings, ambience, mute button |
+
+### Important Gotchas
+
+- `socket.to(room)` excludes sender — use `io.to(room)` when sender also needs the event
+- Tailwind v4 uses CSS `@theme` directive, not `tailwind.config.js`
+- Socket.io client must be in `'use client'` components only (no SSR)
+- Server must start with `npm run dev` (not `npx ts-node-dev` directly) — includes `-r tsconfig-paths/register`
+- Server `tsconfig.json` needs `rootDir: ".."` to include the shared directory
+- Snippet `subRound` in `ClientGameState` is **1-indexed**
+- Non-audio modes: `songs` array is empty — use `settings.roundCount` for `totalRounds`
+- `SnippetModeState` cast needs `as unknown` intermediate: `((state.modeState as unknown) as SnippetModeState)`
 
 ---
 
-## 12. Development Phases
+## 12. Development Status
 
-### Phase 1: MVP (Core Experience)
-**Goal**: A playable game that demonstrates the core concept end-to-end.
+### Phase 1 — MVP ✅ Complete
+- [x] Project setup (Next.js 15, Tailwind v4, Express, Socket.io)
+- [x] Host screen: landing, room creation, lobby, game screen, scoreboard, game over
+- [x] Player controller: join, lobby, buzzer, answer input, score display
+- [x] Room system: 4-char code, QR code, room cleanup
+- [x] Classic Buzz-In mode
+- [x] iTunes Search API integration (30s preview, album art, metadata)
+- [x] Fuzzy answer verification (song title + artist)
+- [x] Real-time sync: buzzer, answers, scores, round progression
+- [x] Scoring: 1pt artist / 2pt song / 3pt both
+- [x] Dark neon/cyberpunk UI
 
-- [x] Project setup (Next.js, Tailwind, Express, Socket.io)
-- [x] Host screen: landing page, room creation, lobby, basic game screen, scoreboard, game over
-- [x] Player controller: join screen, lobby, buzzer, answer input, score display
-- [x] Room system with code generation and QR code
-- [x] **Classic Buzz-In mode** (single game mode)
-- [x] iTunes Search API integration: song preview playback, song/artist metadata
-- [x] Basic answer verification (fuzzy matching for song title and artist)
-- [x] Real-time synchronization: buzzer, answers, scores, round progression
-- [x] Basic scoring: 1 point artist, 2 points song, 3 points both
-- [x] Dark theme UI (neon cyberpunk)
-- [x] Free-for-all mode (2-8 players)
-- [ ] Deploy frontend (Vercel) + backend (Railway/Render)
-
-### Phase 2: Filters & Customization
-- [x] Genre filter (single and multi-select)
+### Phase 2 — Customization ✅ Complete
+- [x] Genre filter (single-select)
 - [x] Era/date range filter
-- [ ] Difficulty filter (deferred — needs Apple Music API charts or adaptive system)
-- [ ] Custom playlist support (deferred — tied to Apple Music API migration)
 - [x] Configurable round count and timer
-- [x] Adult mode: drinking game suggestions after each round
-- [x] Kid-friendly mode: default mode without adult toggle
-- [x] Team mode (2-4 teams)
+- [x] Adult mode: drinking prompts after each round
+- [x] Kid-friendly default (no adult content)
+- [x] Team mode (2–4 teams, drag-and-drop assignment)
 
-### Phase 3: Additional Game Modes
-- [ ] Game mode selection in lobby
-- [ ] **Speed Round** mode
-- [ ] **Song fade-out on correct answer**: When a player guesses correctly (song, artist, or both), the song preview continues playing for ~2 seconds and smoothly fades out (using Web Audio API gain ramp) instead of stopping abruptly. Creates a satisfying "nailed it" moment where players hear the song confirm their answer before the reveal phase begins.
-- [ ] **Snippet Challenge** mode with progressive clip lengths
-- [ ] **Elimination** mode
-- [ ] **Lyric Word Match** mode with curated word bank
-- [ ] Hybrid verification system (player vote + lyrics API challenge)
+### Phase 3 — Additional Game Modes ✅ Complete
+- [x] Game mode selection in lobby (mode grid with descriptions)
+- [x] **Speed** mode (10s clips, fast transitions)
+- [x] **Snippet** mode (2/5/10/20s clips, 4/3/2/1 pts)
+- [x] **Elimination** mode (Last One Standing + Fixed Rounds, Last Chance, Sudden Death)
+- [x] **Lyric Word Match** mode (60-word bank, non-audio, host-judged)
+- [x] Song fade-out on correct answer (Web Audio API gain ramp)
 
-### Phase 4: Polish & Social Features
-- [ ] Refined animations and visual effects (host screen)
-- [ ] Winner celebration animation on game-over screen (top-3 reveal with special effects, inspired by Kahoot-style and Jackbox-style reveals)
-- [ ] **Sound effects** (synthesized via Web Audio API for zero-dependency, tiny footprint):
-  - Buzzer press: satisfying "buzz" or "ding" when a player hits the buzzer
-  - Correct answer: positive chime / success sound
-  - Wrong answer: subtle negative tone (not punishing, just informative)
-  - Timer urgency: ticking or rising-pitch sound in the last ~5 seconds of a round
-  - Game over / winner reveal: celebratory fanfare
-  - Player join notification: subtle audio cue on host screen when a new player enters the lobby
-- [ ] **Background music / lobby ambiance**: Subtle ambient music loop for the lobby and waiting screens to fill dead air while players join. Important considerations:
-  - Background music should ONLY play in lobby/waiting states — during gameplay the song preview IS the audio
-  - Must include a visible mute/volume toggle since hosts may be in noisy environments or prefer silence
-  - Should fade out smoothly when transitioning from lobby to game start
-  - Keep it low-energy and unobtrusive so it doesn't compete with conversation
-- [ ] Optional light mode toggle
-- [ ] Player accounts (optional sign-up)
-- [ ] Leaderboards (global and friend-based)
-- [ ] Game history / stats tracking
-- [ ] Audience/spectator mode for large gatherings
-- [ ] Additional game modes from brainstorm list
+### Phase 4 — Polish ✅ Complete
+- [x] Synthesized sound effects (buzzer, correct, wrong, tick, fanfare, tiebreaker stinger/pulse, elimination reveal, last chance)
+- [x] Sound Lab preview page (`/sounds`)
+- [x] Lobby ambience music (128 BPM synthwave, lookahead-scheduled)
+- [x] Lobby mute/unmute button (volume ramp — never stops scheduler)
+- [x] Disconnection self-healing (socket ID remapped by display name at buzz time)
+- [x] 60s auto-kick for disconnected players
+- [ ] Pre-game rules screen (mode-specific tips before round 1)
+- [ ] Winner celebration animation (Game Over screen)
+
+### Pending / Backlog
+- [ ] Deploy to Railway (server) + Vercel (client)
+- [ ] Pre-populate lyric cache for Name That Lyric (currently 23/367 songs cached)
+- [ ] Difficulty filter (requires charts API or adaptive system)
+- [ ] Tie-breaking by timestamp of final point (first to reach winning score wins)
+- [ ] Play Again flow (reset without full page reload)
+- [ ] Drag-and-drop cursor offset polish
 
 ---
 
-## 13. Open Decisions & TBD
+## 13. Deployment
 
-These items need to be decided during development:
+### Target Infrastructure
+- **Backend**: Railway — Node.js server with Socket.io
+- **Frontend**: Vercel — Next.js 15
 
-| Decision | Options | Notes |
-|----------|---------|-------|
-| Visual theme | Modern / Retro / Neon / Game-show | To be explored during design phase |
-| Color palette | TBD | Should complement dark mode primary theme |
-| Exact Spotify scopes needed | TBD | Depends on final feature set |
-| Lyrics API choice | Genius vs Musixmatch vs both | Evaluate accuracy, rate limits, and cost |
-| Word bank source for Lyric Word Match | Custom curated vs generated from lyrics corpus | Could start curated and expand |
-| Fuzzy matching threshold | How close is "close enough"? | Need to test with real song/artist names |
-| Disconnect timeout | 30s? 60s? 2 min? | How long to hold a player's spot |
-| Sound effects | Web Audio API synthesis vs pre-recorded audio files | Synthesis preferred for zero dependencies and small bundle; see Phase 4 for detailed plan |
-| Monetization (if any) | Ads, premium modes, cosmetics, none | Not a priority but worth noting |
+### Environment Variables
+
+**Server (Railway)**:
+```
+PORT=                        # Set automatically by Railway — do not override
+CLIENT_URL=                  # Vercel production URL (for CORS)
+MUSIXMATCH_API_KEY=          # Optional — Musixmatch free tier, 2000 calls/day
+```
+
+**Client (Vercel)**:
+```
+NEXT_PUBLIC_SERVER_URL=      # Railway production URL
+```
+
+### Deployment Steps
+1. Push to GitHub
+2. Deploy server to Railway (connect repo, set `CLIENT_URL` after Vercel URL is known)
+3. Deploy client to Vercel (connect repo, set `NEXT_PUBLIC_SERVER_URL` to Railway URL)
+4. Update Railway `CLIENT_URL` with the final Vercel URL
+5. Smoke test: create room, join on phone, play a round of each mode
+
+---
+
+## 14. Future Ideas
+
+| Idea | Notes |
+|------|-------|
+| Name That Playlist | Given 3–5 songs, guess what genre/decade/theme connects them |
+| Finish the Lyric | Lyric displayed with a blank — fill in the missing word |
+| Artist Roulette | All songs from one mystery artist; guess who it is |
+| Album Cover | Album art shown; guess album name and artist |
+| Versus Mode | 1v1 bracket tournament |
+| Audience/Spectator mode | Watch-only join for large gatherings |
+| User Accounts | Optional sign-up for stats and leaderboards |
+| Global Leaderboards | Cross-game score tracking |
+| Apple Music API | MusicKit migration ($99/yr Apple Developer Program) — better preview reliability |
+| Custom Playlist | Host pastes a playlist URL as the song pool |
 
 ---
 
@@ -521,4 +567,5 @@ These items need to be decided during development:
 
 | Date | Version | Changes |
 |------|---------|---------|
-| Feb 2026 | 1.0 | Initial scope document created |
+| Feb 2026 | 1.0 | Initial scope document (pre-development) |
+| Apr 2026 | 2.0 | Full rewrite to reflect actual built state: 5 game modes, sound system, architecture details, deployment plan |

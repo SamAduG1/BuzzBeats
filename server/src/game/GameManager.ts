@@ -199,6 +199,22 @@ class GameManager {
     const game = this.games.get(roomCode);
     if (!game) return { accepted: false, error: 'No active game' };
 
+    // Auto-heal stale socket IDs that slipped through missed reconnect events.
+    // If this socket isn't in game.scores, find the player by display name in the
+    // room and migrate all game state to the new ID before any other checks run.
+    if (!game.scores.has(playerId)) {
+      const room = roomManager.getRoom(roomCode);
+      const player = room?.players.find((p) => p.id === playerId);
+      if (player) {
+        for (const [oldId, score] of game.scores) {
+          if (score.displayName.toLowerCase() === player.displayName.toLowerCase()) {
+            this.updatePlayerSocketId(roomCode, oldId, playerId);
+            break;
+          }
+        }
+      }
+    }
+
     // In tiebreaker, only the tied players may buzz
     if (game.isTiebreaker && !game.tiebreakerIds.includes(playerId)) {
       return { accepted: false, error: 'Only tied players can buzz in sudden death' };

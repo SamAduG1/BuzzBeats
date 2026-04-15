@@ -9,6 +9,7 @@ import { useRoom } from '@/context/RoomContext';
 import { AVAILABLE_GENRES, AVAILABLE_DECADES } from '@shared/types/game';
 import { GameModeId, AVAILABLE_GAME_MODES } from '@shared/types/gameMode';
 import GameModeIcon from '@/components/ui/GameModeIcon';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 const ROUND_OPTIONS = [5, 10, 15, 20];
 const TIMER_OPTIONS = [15, 30];
@@ -89,6 +90,22 @@ function HostLobbyContent() {
   const [teamCount, setTeamCount] = useState(2);
   const [eliminationSubMode, setEliminationSubMode] = useState<'last-one-standing' | 'fixed-rounds'>('last-one-standing');
   const [showQR, setShowQR] = useState(false);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const { startLobbyAmbience, stopLobbyAmbience, setLobbyAmbienceVolume } = useSoundEffects();
+
+  // Start on mount, stop on unmount
+  useEffect(() => {
+    startLobbyAmbience();
+    return () => { stopLobbyAmbience(); };
+  }, [startLobbyAmbience, stopLobbyAmbience]);
+
+  const toggleMusic = () => {
+    setMusicMuted(m => {
+      const next = !m;
+      setLobbyAmbienceVolume(next ? 0 : 0.45);
+      return next;
+    });
+  };
 
   const toggleGenre = (g: string) =>
     setSelectedGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
@@ -121,6 +138,7 @@ function HostLobbyContent() {
   };
   const handleStartGame = async () => {
     if (!gameMode) return;
+    stopLobbyAmbience(); // fade out before game audio kicks in
     await startGame({
       gameMode,
       roundCount,
@@ -182,6 +200,33 @@ function HostLobbyContent() {
               </span>
               <span className="text-xs block mt-0.5" style={{ color: '#8888aa' }}>Setup your game</span>
             </div>
+          </button>
+
+          {/* Music mute toggle */}
+          <button
+            onClick={toggleMusic}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer"
+            style={{
+              background: musicMuted ? 'rgba(255,255,255,0.05)' : 'rgba(0,240,255,0.06)',
+              border: musicMuted ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,240,255,0.25)',
+            }}
+            title={musicMuted ? 'Unmute lobby music' : 'Mute lobby music'}
+          >
+            {musicMuted ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555577" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+            )}
+            <span className="text-xs" style={{ color: musicMuted ? '#555577' : '#00f0ff', fontFamily: 'var(--font-orbitron), sans-serif' }}>
+              {musicMuted ? 'MUTED' : 'MUSIC'}
+            </span>
           </button>
 
           {/* Room code + QR */}

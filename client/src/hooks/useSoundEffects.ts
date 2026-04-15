@@ -209,9 +209,17 @@ export function useSoundEffects() {
   }, [playNote]);
 
   // -------------------------------------------------------------------------
-  // Sudden death stinger — distorted power chord riff
-  // Sawtooth oscillators through a WaveShaper (overdrive) for electric guitar
-  // crunch. Pattern: DUN... DUN... dun-dun-DUUNNNN
+  // Sudden death stinger — cinematic cyberpunk announcement (one-shot, ~6s)
+  //
+  // No chiptune melody. Three discrete impact moments with detuned sawtooth
+  // sirens in between — feels like a warning alarm / boss encounter cutscene.
+  //
+  //   t=0.00  Impact 1: kick + crash + detuned sawtooth chord stab
+  //   t=0.05  Descending siren: detuned sawtooth glides E5→E4, resonant filter
+  //   t=0.85  Impact 2: kick
+  //   t=0.95  Ascending sweep: E3→E5 glide, filter opens (tension build)
+  //   t=1.55  Impact 3: kick + crash + chord stab
+  //   t=1.90  Final detuned chord: 300ms attack, long fade into the pulse
   // -------------------------------------------------------------------------
   const playTiebreakerStinger = useCallback(async () => {
     const ctx = await ensureRunning();
@@ -219,122 +227,402 @@ export function useSoundEffects() {
 
     const t = ctx.currentTime;
 
-    // Build overdrive curve (soft-clipping distortion)
+    // Distortion
     const distortion = ctx.createWaveShaper();
     const samples = 512;
-    const curve = new Float32Array(samples);
-    const amount = 180;
+    const distCurve = new Float32Array(samples);
+    const amount = 200;
     for (let i = 0; i < samples; i++) {
       const x = (i * 2) / samples - 1;
-      curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+      distCurve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
     }
-    distortion.curve = curve;
+    distortion.curve = distCurve;
     distortion.oversample = '4x';
 
     const master = ctx.createGain();
     master.connect(ctx.destination);
-    master.gain.setValueAtTime(0.45, t);
+    master.gain.setValueAtTime(0.52, t);
     distortion.connect(master);
 
-    // Power chord: root + fifth + octave through distortion
-    const hit = (root: number, startT: number, dur: number, vol: number) => {
+    // Crash noise buffer
+    const crashSize = Math.floor(ctx.sampleRate * 0.50);
+    const crashBuf  = ctx.createBuffer(1, crashSize, ctx.sampleRate);
+    const cd = crashBuf.getChannelData(0);
+    for (let i = 0; i < crashSize; i++) cd[i] = Math.random() * 2 - 1;
+
+    // Detuning: ±7 cents — the unison width that defines the cyberpunk synth sound
+    const DR = Math.pow(2, 7 / 1200); // detune ratio
+
+    const kick = (startT: number, vol = 0.92) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, startT);
+      osc.frequency.exponentialRampToValueAtTime(40, startT + 0.15);
+      g.gain.setValueAtTime(vol, startT);
+      g.gain.exponentialRampToValueAtTime(0.001, startT + 0.30);
+      osc.connect(g); g.connect(master);
+      osc.start(startT); osc.stop(startT + 0.32);
+    };
+
+    const crash = (startT: number, vol = 0.32) => {
+      const src    = ctx.createBufferSource();
+      src.buffer   = crashBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'highpass';
+      filter.frequency.setValueAtTime(5500, startT);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, startT);
+      g.gain.exponentialRampToValueAtTime(0.001, startT + 0.45);
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(startT); src.stop(startT + 0.50);
+    };
+
+    // Detuned sawtooth chord stab — sharp attack, two oscs per voice for width
+    const stab = (startT: number, root: number, dur: number, vol: number) => {
       for (const ratio of [1, 1.5, 2]) {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.connect(g);
-        g.connect(distortion);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(root * ratio, startT);
-        g.gain.setValueAtTime(0, startT);
-        g.gain.linearRampToValueAtTime(vol, startT + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.001, startT + dur);
-        osc.start(startT);
-        osc.stop(startT + dur + 0.05);
+        for (const det of [1 / DR, DR]) {
+          const osc = ctx.createOscillator();
+          const g   = ctx.createGain();
+          osc.type  = 'sawtooth';
+          osc.frequency.setValueAtTime(root * ratio * det, startT);
+          g.gain.setValueAtTime(0, startT);
+          g.gain.linearRampToValueAtTime(vol, startT + 0.010);
+          g.gain.exponentialRampToValueAtTime(0.001, startT + dur);
+          osc.connect(g); g.connect(distortion);
+          osc.start(startT); osc.stop(startT + dur + 0.05);
+        }
       }
     };
 
-    // DUN ... DUN ... dun-dun-DUUNNNN  then ascending run + final big chord
-    // E2 = 82 Hz root
-    hit(82,  t,        0.18, 0.38);  // DUN
-    hit(82,  t + 0.32, 0.18, 0.42);  // DUN
-    hit(82,  t + 0.64, 0.10, 0.44);  // dun
-    hit(82,  t + 0.77, 0.10, 0.44);  // dun
-    hit(82,  t + 0.90, 0.65, 0.50);  // DUUNNNN (sustained)
-    // Ascending run: A2 → B2 → E3 (softer, just a tail)
-    hit(110, t + 1.40, 0.12, 0.22);
-    hit(123, t + 1.55, 0.12, 0.18);
-    hit(165, t + 1.70, 0.20, 0.06);
-    // Second phrase — very quiet, just texture
-    hit(164, t + 2.10, 0.12, 0.04);
-    hit(164, t + 2.25, 0.12, 0.04);
-    // Final sustained note — fades exactly to zero as the 6s timer ends
-    hit(164, t + 2.40, 3.60, 0.010);
+    // Detuned gliding siren — the cyberpunk warning horn
+    // Two detuned sawtooth oscs glide from fromFreq to toFreq over dur seconds
+    // through a resonant lowpass filter that opens/closes for movement
+    const siren = (
+      startT: number, fromFreq: number, toFreq: number,
+      dur: number, vol: number, filterOpen: number, filterClose: number
+    ) => {
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'lowpass';
+      filter.Q.setValueAtTime(5, startT);
+      filter.frequency.setValueAtTime(filterOpen, startT);
+      filter.frequency.exponentialRampToValueAtTime(filterClose, startT + dur * 0.75);
+      filter.connect(master);
+      for (const det of [1 / DR, DR]) {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type  = 'sawtooth';
+        osc.frequency.setValueAtTime(fromFreq * det, startT);
+        osc.frequency.exponentialRampToValueAtTime(toFreq * det, startT + dur);
+        g.gain.setValueAtTime(0, startT);
+        g.gain.linearRampToValueAtTime(vol, startT + 0.06);
+        g.gain.setValueAtTime(vol, startT + dur - 0.12);
+        g.gain.linearRampToValueAtTime(0, startT + dur);
+        osc.connect(g); g.connect(filter);
+        osc.start(startT); osc.stop(startT + dur + 0.05);
+      }
+    };
+
+    // ── Impact 1 ──────────────────────────────────────────────────────────
+    kick(t);
+    crash(t);
+    stab(t, 82.41, 0.42, 0.28);          // E2 power chord
+
+    // ── Descending siren: E5 → E4 ─────────────────────────────────────────
+    // Resonant filter closes as it descends — dark, menacing
+    siren(t + 0.05, 659.25, 329.63, 0.80, 0.22, 2400, 700);
+
+    // ── Impact 2 ──────────────────────────────────────────────────────────
+    kick(t + 0.85, 0.85);
+
+    // ── Ascending sweep: E3 → E5 ──────────────────────────────────────────
+    // Filter opens up as it climbs — feels like tension releasing into danger
+    siren(t + 0.95, 164.81, 659.25, 0.58, 0.18, 500, 2200);
+
+    // ── Impact 3 ──────────────────────────────────────────────────────────
+    kick(t + 1.55, 0.92);
+    crash(t + 1.55, 0.26);
+    stab(t + 1.55, 82.41, 0.30, 0.24);
+
+    // ── Final detuned chord: 300ms attack, 4s fade ────────────────────────
+    // Blends into the pulse underneath; no bite from slow attack
+    for (const ratio of [1, 1.5, 2]) {
+      for (const det of [1 / DR, DR]) {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type  = 'sawtooth';
+        osc.frequency.setValueAtTime(82.41 * ratio * det, t + 1.90);
+        g.gain.setValueAtTime(0, t + 1.90);
+        g.gain.linearRampToValueAtTime(0.010, t + 2.20); // 300ms — no bite
+        g.gain.exponentialRampToValueAtTime(0.001, t + 6.00);
+        osc.connect(g); g.connect(distortion);
+        osc.start(t + 1.90);
+        osc.stop(t + 6.05);
+      }
+    }
   }, [ensureRunning]);
 
   // -------------------------------------------------------------------------
-  // Sudden death pulse — low throbbing drone that loops during tiebreaker
-  // 60Hz sine with an LFO (4Hz) on gain to create a heartbeat-style throb.
-  // Returns a stop function; caller must invoke it on phase change.
+  // Sudden death pulse — boss-battle music loop for the tiebreaker phase.
+  //
+  // Style: 50/50 cyberpunk / chiptune — 140 BPM (Perturbator pace), E minor.
+  //
+  // Cyberpunk elements:
+  //   - Detuned sawtooth pad (±7 cents unison) through LFO-swept lowpass —
+  //     the Perturbator/Carpenter Brut signature width
+  //   - Acid bass: sawtooth + Q=10 resonant lowpass, filter sweeps 1800→120Hz
+  //     per note (TB-303 "wah" character)
+  //   - Industrial kick pattern: syncopated 16ths before beats 2 & 4
+  //
+  // Chiptune elements:
+  //   - Square wave arp through bandpass filter (Q=1.5 @ 1200Hz) — tames the
+  //     raw 8-bit edge while keeping the punchy rhythmic character
+  //   - 8-note looping bass pattern
+  //   - Snare on 2 & 4 with ghost hits
+  //
+  // Uses the same lookahead scheduler pattern as lobby ambience (25ms interval,
+  // 120ms lookahead). Sustained pad oscillators stored in the ref; all drum/
+  // bass/arp nodes are fire-and-forget.
   // -------------------------------------------------------------------------
-  const pulseNodesRef = useRef<{ master: GainNode; osc: OscillatorNode; lfoOsc: OscillatorNode } | null>(null);
+  const pulseNodesRef = useRef<{
+    intervalId: ReturnType<typeof setInterval>;
+    master: GainNode;
+    padOscs: OscillatorNode[];
+  } | null>(null);
 
   const startTiebreakerPulse = useCallback(async () => {
     const ctx = await ensureRunning();
     if (!ctx) return;
 
-    // Stop any existing pulse first
+    // Stop any existing instance first
     if (pulseNodesRef.current) {
+      clearInterval(pulseNodesRef.current.intervalId);
       try {
         pulseNodesRef.current.master.gain.setValueAtTime(0, ctx.currentTime);
-        pulseNodesRef.current.osc.stop(ctx.currentTime + 0.05);
-        pulseNodesRef.current.lfoOsc.stop(ctx.currentTime + 0.05);
+        pulseNodesRef.current.padOscs.forEach(o => { try { o.stop(ctx.currentTime + 0.05); } catch {} });
       } catch {}
       pulseNodesRef.current = null;
     }
 
-    const t = ctx.currentTime;
+    const BPM       = 140;
+    const BEAT      = 60 / BPM;   // 0.4286s
+    const SIXTEENTH = BEAT / 4;   // 0.1071s — scheduling resolution
+    const EIGHTH    = BEAT / 2;   // 0.2143s
 
-    // Main drone oscillator
-    const osc = ctx.createOscillator();
+    // Detuning: ±7 cents — the unison width that defines cyberpunk synths
+    const DR = Math.pow(2, 7 / 1200);
+
+    // Master output — fade in over 1.5s so the stinger has room to breathe
     const master = ctx.createGain();
-    osc.connect(master);
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 1.5);
     master.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(60, t);
 
-    // LFO oscillator modulates master gain (4Hz throb)
-    const lfoOsc = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfoOsc.connect(lfoGain);
-    lfoGain.connect(master.gain);
-    lfoOsc.type = 'sine';
-    lfoOsc.frequency.setValueAtTime(4, t);
-    lfoGain.gain.setValueAtTime(0.12, t); // throb depth
+    const t0 = ctx.currentTime;
+    const padOscs: OscillatorNode[] = [];
 
-    // Fade in gently
-    master.gain.setValueAtTime(0, t);
-    master.gain.linearRampToValueAtTime(0.15, t + 0.5);
+    // ── Detuned sawtooth pad ─────────────────────────────────────────────────
+    // Three frequency layers, two oscs each at ±7 cents, through an LFO-
+    // modulated lowpass filter. This is the wide, warm cyberpunk texture.
+    const padFreqs = [82.41, 123.47, 164.81]; // E2, B2, E3
+    const padLfo   = ctx.createOscillator();
+    const padLfoGain = ctx.createGain();
+    padLfo.type = 'sine';
+    padLfo.frequency.setValueAtTime(0.35, t0);  // slow 0.35Hz sweep
+    padLfoGain.gain.setValueAtTime(600, t0);     // ±600Hz filter swing
+    padLfo.connect(padLfoGain);
 
-    osc.start(t);
-    lfoOsc.start(t);
+    const padFilter = ctx.createBiquadFilter();
+    padFilter.type = 'lowpass';
+    padFilter.frequency.setValueAtTime(900, t0);
+    padFilter.Q.setValueAtTime(1.8, t0);
+    padLfoGain.connect(padFilter.frequency);
+    padFilter.connect(master);
+    padLfo.start(t0);
 
-    pulseNodesRef.current = { master, osc, lfoOsc };
+    padFreqs.forEach((freq, i) => {
+      for (const det of [1 / DR, DR]) {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.type  = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * det, t0);
+        // Fade in progressively — highest layer comes in last
+        const vol = i === 0 ? 0.18 : i === 1 ? 0.12 : 0.07;
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(vol, t0 + 1.5 + i * 0.5);
+        osc.connect(g); g.connect(padFilter);
+        osc.start(t0);
+        padOscs.push(osc);
+      }
+    });
+    // Also store lfo osc so it gets stopped with the pad
+    padOscs.push(padLfo);
+
+    // Pre-bake noise buffers (reused every hit — no allocation in the loop)
+    const snareSize = Math.floor(ctx.sampleRate * 0.09);
+    const snareBuf  = ctx.createBuffer(1, snareSize, ctx.sampleRate);
+    const sd = snareBuf.getChannelData(0);
+    for (let i = 0; i < snareSize; i++) sd[i] = Math.random() * 2 - 1;
+
+    const hatSize = Math.floor(ctx.sampleRate * 0.022);
+    const hatBuf  = ctx.createBuffer(1, hatSize, ctx.sampleRate);
+    const hd = hatBuf.getChannelData(0);
+    for (let i = 0; i < hatSize; i++) hd[i] = Math.random() * 2 - 1;
+
+    // ── Square-wave arp ──────────────────────────────────────────────────────
+    // Filtered through bandpass at 1200Hz (Q=1.5) — takes the raw 8-bit edge
+    // off while keeping the punchy rhythmic character. 32-note phrase.
+    const arpSeq: number[] = [
+      329.63, 329.63, 293.66, 293.66,  // E4 E4 D4 D4  — opening descent
+      246.94, 246.94, 220.00, 220.00,  // B3 B3 A3 A3
+      196.00, 220.00, 246.94, 293.66,  // G3 A3 B3 D4  — climb back
+      329.63, 293.66, 246.94, 196.00,  // E4 D4 B3 G3  — resolve down
+      220.00, 246.94, 329.63, 392.00,  // A3 B3 E4 G4  — second phrase, surge
+      349.23, 329.63, 293.66, 246.94,  // F4 E4 D4 B3  — flat-6 noir tension
+      220.00, 196.00, 246.94, 329.63,  // A3 G3 B3 E4
+      293.66, 246.94, 196.00, 164.81,  // D4 B3 G3 E3  — full descent to rest
+    ];
+    let arpIdx = 0;
+
+    const arp = (t: number) => {
+      const freq = arpSeq[arpIdx % arpSeq.length];
+      arpIdx++;
+      const osc    = ctx.createOscillator();
+      const bp     = ctx.createBiquadFilter();
+      const g      = ctx.createGain();
+      osc.type     = 'square';
+      osc.frequency.setValueAtTime(freq, t);
+      bp.type      = 'bandpass';
+      bp.frequency.setValueAtTime(1200, t);
+      bp.Q.setValueAtTime(1.5, t);
+      g.gain.setValueAtTime(0.15, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + SIXTEENTH * 0.85);
+      osc.connect(bp); bp.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + SIXTEENTH);
+    };
+
+    // ── Acid bass (TB-303 style) ─────────────────────────────────────────────
+    // Sawtooth + resonant lowpass (Q=10), filter sweeps from 1800Hz → 120Hz
+    // per note — the "wah" per-note sound that defines acid house / cyberpunk.
+    const bassSeq: number[] = [
+      82.41,  82.41,  98.00,  110.00,   // E2 E2 G2 A2
+      123.47, 110.00, 98.00,  82.41,    // B2 A2 G2 E2
+    ];
+    let bassIdx = 0;
+
+    const bass = (t: number) => {
+      const freq   = bassSeq[bassIdx % bassSeq.length];
+      bassIdx++;
+      const osc    = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const g      = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(10, t);
+      filter.frequency.setValueAtTime(1800, t);
+      filter.frequency.exponentialRampToValueAtTime(120, t + EIGHTH * 0.9);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.50, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.001, t + EIGHTH * 1.80);
+      osc.connect(filter); filter.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + EIGHTH * 2);
+    };
+
+    const kick = (t: number, vol = 0.88) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(175, t);
+      osc.frequency.exponentialRampToValueAtTime(38, t + 0.15);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + 0.30);
+    };
+
+    const snare = (t: number, vol = 0.44) => {
+      const src    = ctx.createBufferSource();
+      src.buffer   = snareBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'bandpass';
+      filter.frequency.setValueAtTime(1600, t);
+      filter.Q.setValueAtTime(0.7, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.10);
+    };
+
+    // Hi-hats on 8th notes only (not 16ths) — more breathing room, less 8-bit
+    const hihat = (t: number, vol: number) => {
+      const src    = ctx.createBufferSource();
+      src.buffer   = hatBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'highpass';
+      filter.frequency.setValueAtTime(10000, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.025);
+    };
+
+    // Lookahead scheduler — 16th note resolution
+    let step     = 0;
+    let nextTime = ctx.currentTime + 0.05;
+    const LOOKAHEAD = 0.12;
+
+    const schedule = () => {
+      while (nextTime < ctx.currentTime + LOOKAHEAD) {
+        const s = step % 16;
+
+        // Industrial kick: hard on 1 & 3, syncopated 16ths before 2 & 4
+        if (s === 0 || s === 8)  kick(nextTime);           // beats 1 & 3
+        if (s === 3 || s === 11) kick(nextTime, 0.38);     // 16th before 2 & 4
+        if (s === 6)             kick(nextTime, 0.28);     // mid-bar accent
+
+        // Snare on 2 & 4 with ghost hits
+        if (s === 4 || s === 12) snare(nextTime);
+        if (s === 6 || s === 14) snare(nextTime, 0.12);   // ghost snares
+
+        // Hi-hats: 8th notes only (s % 2 === 0), accented on downbeats
+        if (s % 2 === 0) hihat(nextTime, s % 4 === 0 ? 0.14 : 0.07);
+
+        // Acid bass: every 8th note
+        if (s % 2 === 0) bass(nextTime);
+
+        // Filtered arp: every 16th
+        arp(nextTime);
+
+        step++;
+        nextTime += SIXTEENTH;
+      }
+    };
+
+    schedule();
+    const intervalId = setInterval(schedule, 25);
+    pulseNodesRef.current = { intervalId, master, padOscs };
   }, [ensureRunning]);
 
   const stopTiebreakerPulse = useCallback(async () => {
-    const ctx = await ensureRunning();
-    if (!ctx || !pulseNodesRef.current) return;
+    if (!pulseNodesRef.current) return;
 
-    const { master, osc, lfoOsc } = pulseNodesRef.current;
+    const { intervalId, master, padOscs } = pulseNodesRef.current;
+    clearInterval(intervalId);
+    pulseNodesRef.current = null;
+
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+
     const t = ctx.currentTime;
     try {
       master.gain.cancelScheduledValues(t);
       master.gain.setValueAtTime(master.gain.value, t);
-      master.gain.linearRampToValueAtTime(0, t + 0.3);
-      osc.stop(t + 0.35);
-      lfoOsc.stop(t + 0.35);
+      master.gain.linearRampToValueAtTime(0, t + 0.4);
+      padOscs.forEach(osc => { try { osc.stop(t + 0.45); } catch {} });
     } catch {}
-    pulseNodesRef.current = null;
   }, [ensureRunning]);
 
   // -------------------------------------------------------------------------
@@ -389,6 +677,264 @@ export function useSoundEffects() {
     await playNote(523, 0.35, { type: 'square', gain: 0.28, attack: 0.005, decay: 0.3, startAt: 0.15 });
   }, [playNote]);
 
+  // -------------------------------------------------------------------------
+  // Lobby ambience — slow evolving cyberpunk pad (Am7 chord)
+  // Multiple detuned sine/triangle oscillators at A2/E3/G3/A3/C4/E4 with
+  // individual slow LFOs for a living, breathing quality. Feedback delay
+  // adds depth. Fades in over 3s, fades out over 2.5s.
+  // -------------------------------------------------------------------------
+  const lobbyAmbienceRef = useRef<{
+    intervalId: ReturnType<typeof setInterval>;
+    master: GainNode;
+    padOscs: OscillatorNode[];
+  } | null>(null);
+
+  const startLobbyAmbience = useCallback(async () => {
+    if (lobbyAmbienceRef.current) return;
+
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+
+    const BPM = 128;
+    const BEAT     = 60 / BPM;          // ~0.469s
+    const STEP     = BEAT / 2;          // 8th note ~0.234s
+    const SIXTEENTH = BEAT / 4;         // 16th note ~0.117s
+
+    // Master gain — fade in over 2s
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 2.0);
+    master.connect(ctx.destination);
+
+    // Pre-bake noise buffers once
+    const snareSize = Math.floor(ctx.sampleRate * 0.12);
+    const snareBuf  = ctx.createBuffer(1, snareSize, ctx.sampleRate);
+    const sd = snareBuf.getChannelData(0);
+    for (let i = 0; i < snareSize; i++) sd[i] = Math.random() * 2 - 1;
+
+    const hatSize = Math.floor(ctx.sampleRate * 0.04);
+    const hatBuf  = ctx.createBuffer(1, hatSize, ctx.sampleRate);
+    const hd = hatBuf.getChannelData(0);
+    for (let i = 0; i < hatSize; i++) hd[i] = Math.random() * 2 - 1;
+
+    const t0 = ctx.currentTime;
+    const padOscs: OscillatorNode[] = [];
+
+    // ----------------------------------------------------------------
+    // ATMOSPHERE PAD — Am7 chord sines underneath, very slow fade-in
+    // Gives the dark, moody underbelly that defines cyberpunk atmosphere
+    // ----------------------------------------------------------------
+    const padLayers = [
+      { freq: 110.0,  vol: 0.22 }, // A2 — root
+      { freq: 165.0,  vol: 0.13 }, // E3 — fifth
+      { freq: 196.0,  vol: 0.09 }, // G3 — minor seventh
+      { freq: 261.63, vol: 0.06 }, // C4 — minor third
+    ];
+    padLayers.forEach(({ freq, vol }) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + 5.0); // very slow swell
+      osc.connect(g); g.connect(master);
+      osc.start(t0);
+      padOscs.push(osc);
+    });
+
+    // ----------------------------------------------------------------
+    // ARP — shared resonant filter with slow LFO sweep
+    // The opening/closing filter is the signature cyberpunk synth texture
+    // ----------------------------------------------------------------
+    const arpFilter = ctx.createBiquadFilter();
+    arpFilter.type = 'lowpass';
+    arpFilter.frequency.setValueAtTime(500, t0);
+    arpFilter.Q.setValueAtTime(5, t0);  // resonant peak for that synth character
+    arpFilter.connect(master);
+
+    // LFO sweeps the filter cutoff (500–2400Hz) over a ~20s period
+    // Safe to use on frequency AudioParam (no gain ramp conflict)
+    const filterLFO     = ctx.createOscillator();
+    const filterLFOGain = ctx.createGain();
+    filterLFO.type = 'sine';
+    filterLFO.frequency.setValueAtTime(0.05, t0); // ~20s period
+    filterLFOGain.gain.setValueAtTime(950, t0);   // sweeps ±950Hz around 1450Hz center
+    arpFilter.frequency.setValueAtTime(1450, t0);
+    filterLFO.connect(filterLFOGain);
+    filterLFOGain.connect(arpFilter.frequency);
+    filterLFO.start(t0);
+    padOscs.push(filterLFO);
+
+    // Am natural minor arpeggio — 16 notes, 16th note resolution (1 bar)
+    // Includes flat-6 (F4 = 349Hz) and major-2nd (B3 = 247Hz) for dark tension
+    const arpSeq = [
+      220,    // A3  — root
+      329.63, // E4  — fifth
+      261.63, // C4  — minor third
+      196.0,  // G3  — minor seventh
+      220,    // A3
+      349.23, // F4  — flat-6, very dark/noir
+      329.63, // E4
+      261.63, // C4
+      246.94, // B3  — major 2nd, creates tension
+      329.63, // E4
+      293.66, // D4  — natural fourth
+      196.0,  // G3
+      220,    // A3
+      440,    // A4  — octave climb
+      392,    // G4
+      349.23, // F4  — resolve back to flat-6
+    ];
+    let arpIdx = 0;
+
+    const arp = (t: number) => {
+      const freq = arpSeq[arpIdx % arpSeq.length];
+      arpIdx++;
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.20, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.001, t + SIXTEENTH * 0.80);
+      osc.connect(g); g.connect(arpFilter);
+      osc.start(t); osc.stop(t + SIXTEENTH);
+    };
+
+    // ----------------------------------------------------------------
+    // DRUMS — kick with syncopation, snare, layered hats
+    // ----------------------------------------------------------------
+    const kick = (t: number, vol = 0.9) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.18);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + 0.38);
+    };
+
+    const snare = (t: number) => {
+      const src    = ctx.createBufferSource();
+      src.buffer   = snareBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'bandpass';
+      filter.frequency.setValueAtTime(1400, t);
+      filter.Q.setValueAtTime(0.7, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.40, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.13);
+    };
+
+    const hihat = (t: number, vol: number) => {
+      const src    = ctx.createBufferSource();
+      src.buffer   = hatBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type  = 'highpass';
+      filter.frequency.setValueAtTime(9000, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      src.connect(filter); filter.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.05);
+    };
+
+    // ----------------------------------------------------------------
+    // BASS — walking Am line: A2 A2 E2 A2 | A2 G2 F2 E2
+    // Moves with the harmony, not just root-root-root
+    // ----------------------------------------------------------------
+    const bassSeq = [110, 110, 82.41, 110, 110, 98.0, 87.31, 82.41];
+    let bassIdx = 0;
+
+    const bass = (t: number) => {
+      const freq   = bassSeq[bassIdx % bassSeq.length];
+      bassIdx++;
+      const osc    = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const g      = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(190, t);
+      g.gain.setValueAtTime(0.55, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + STEP * 1.85);
+      osc.connect(filter); filter.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + STEP * 2);
+    };
+
+    // ----------------------------------------------------------------
+    // LOOKAHEAD SCHEDULER — 16th note resolution (16 steps = 1 bar)
+    // ----------------------------------------------------------------
+    let step     = 0;
+    let nextTime = ctx.currentTime + 0.05;
+    const LOOKAHEAD = 0.12;
+
+    const schedule = () => {
+      while (nextTime < ctx.currentTime + LOOKAHEAD) {
+        const s = step % 16;
+
+        // Kick: beat 1 (s=0), beat 3 (s=8), ghost on s=10 (syncopation)
+        if (s === 0 || s === 8) kick(nextTime);
+        if (s === 10)           kick(nextTime, 0.38); // ghost kick — propulsion
+
+        // Snare: beats 2 (s=4) and 4 (s=12)
+        if (s === 4 || s === 12) snare(nextTime);
+
+        // Hi-hats: on-beats louder, 16th offbeats very quiet
+        hihat(nextTime, s % 4 === 0 ? 0.14 : s % 2 === 0 ? 0.08 : 0.04);
+
+        // Bass: every 8th note (every 2 sixteenth steps)
+        if (s % 2 === 0) bass(nextTime);
+
+        // Arp: every 16th note
+        arp(nextTime);
+
+        step++;
+        nextTime += SIXTEENTH;
+      }
+    };
+
+    schedule();
+    const intervalId = setInterval(schedule, 25);
+    lobbyAmbienceRef.current = { intervalId, master, padOscs };
+  }, [ensureRunning]);
+
+  const setLobbyAmbienceVolume = useCallback(async (vol: number) => {
+    const amb = lobbyAmbienceRef.current;
+    if (!amb) return;
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    amb.master.gain.cancelScheduledValues(t);
+    amb.master.gain.setValueAtTime(amb.master.gain.value, t);
+    amb.master.gain.linearRampToValueAtTime(vol, t + 0.3);
+  }, [ensureRunning]);
+
+  const stopLobbyAmbience = useCallback(async () => {
+    const amb = lobbyAmbienceRef.current;
+    if (!amb) return;
+
+    clearInterval(amb.intervalId);
+
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+
+    const t = ctx.currentTime;
+    amb.master.gain.cancelScheduledValues(t);
+    amb.master.gain.setValueAtTime(amb.master.gain.value, t);
+    amb.master.gain.linearRampToValueAtTime(0, t + 2.0);
+
+    const stopAt = t + 2.1;
+    amb.padOscs.forEach(osc => { try { osc.stop(stopAt); } catch {} });
+
+    // Null the ref only after the fade completes so start() can't race it
+    setTimeout(() => { lobbyAmbienceRef.current = null; }, 2200);
+  }, [ensureRunning]);
+
   return {
     playBuzzer,
     playCorrect,
@@ -400,5 +946,8 @@ export function useSoundEffects() {
     stopTiebreakerPulse,
     playEliminationReveal,
     playLastChanceStinger,
+    startLobbyAmbience,
+    stopLobbyAmbience,
+    setLobbyAmbienceVolume,
   };
 }

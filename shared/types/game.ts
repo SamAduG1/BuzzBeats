@@ -23,7 +23,7 @@ export interface GameSettings {
 
 export const AVAILABLE_GENRES = [
   'Pop', 'Hip-Hop/Rap', 'Rock', 'R&B/Soul',
-  'Country', 'EDM/Dance', 'Alternative/Indie', 'Latin',
+  'Country', 'EDM/Dance', 'Alternative/Indie', 'Latin', 'K-Pop',
 ] as const;
 
 export const AVAILABLE_DECADES = [
