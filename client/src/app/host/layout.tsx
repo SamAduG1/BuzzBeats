@@ -11,6 +11,24 @@ export default function HostLayout({ children }: { children: React.ReactNode }) 
   const [showWarning, setShowWarning] = useState<boolean | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
+  // Keep the screen on for the duration of the host session
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    const acquire = async () => {
+      try {
+        lock = await (navigator as Navigator & { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock.request('screen');
+      } catch {}
+    };
+    acquire();
+    const onVisibility = () => { if (document.visibilityState === 'visible') acquire(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      lock?.release().catch(() => {});
+    };
+  }, []);
+
   useEffect(() => {
     // Only measure once per session (dismissed persists in state)
     if (dismissed) return;

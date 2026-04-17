@@ -78,6 +78,20 @@ export function registerGameHandlers(
     callback({ success: true });
   });
 
+  socket.on('game:skip-song', (callback) => {
+    if (!roomManager.isHost(socket.id)) {
+      callback({ success: false, error: 'Only the host can skip' });
+      return;
+    }
+    const room = roomManager.getRoomBySocketId(socket.id);
+    if (!room) {
+      callback({ success: false, error: 'Room not found' });
+      return;
+    }
+    const result = gameManager.handleSkipSong(room.code, socket.id, io);
+    callback(result);
+  });
+
   socket.on('game:tie-vote', (data, callback) => {
     const room = roomManager.getRoomBySocketId(socket.id);
     if (!room) { callback({ accepted: false, error: 'Room not found' }); return; }

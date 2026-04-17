@@ -404,34 +404,35 @@ export default function PlayerGameScreen() {
         </div>
       )}
 
+      {/* NTL lyric card — visible during both playing and buzzing */}
+      {(gameState.phase === 'playing' || gameState.phase === 'buzzing') &&
+       gameState.gameMode === 'name-that-lyric' && gameState.currentLyric && (
+        <div
+          className="w-full rounded-2xl px-5 py-4"
+          style={{ background: '#12121a', border: '1px solid rgba(0,240,255,0.15)', borderLeft: '3px solid #00f0ff' }}
+        >
+          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: '#8888aa', fontFamily: 'var(--font-orbitron), sans-serif' }}>
+            Name That Lyric
+          </p>
+          {gameState.currentLyric.split('\n').map((line, i) => (
+            <p
+              key={i}
+              className="italic leading-relaxed text-sm"
+              style={{
+                fontFamily: 'var(--font-jetbrains-mono), monospace',
+                color: '#e0e0ff',
+                marginBottom: i < gameState.currentLyric!.split('\n').length - 1 ? '0.25em' : 0,
+              }}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
       {gameState.phase === 'playing' && !isDisqualified && !isEliminated &&
        (!gameState.tiebreakerIds || gameState.tiebreakerIds.includes(myId || '')) && (
-        <>
-          {gameState.gameMode === 'name-that-lyric' && gameState.currentLyric && (
-            <div
-              className="w-full rounded-2xl px-5 py-4 mb-2"
-              style={{ background: '#12121a', border: '1px solid rgba(0,240,255,0.15)', borderLeft: '3px solid #00f0ff' }}
-            >
-              <p className="text-xs uppercase tracking-widest mb-3" style={{ color: '#8888aa', fontFamily: 'var(--font-orbitron), sans-serif' }}>
-                Name That Lyric
-              </p>
-              {gameState.currentLyric.split('\n').map((line, i) => (
-                <p
-                  key={i}
-                  className="italic leading-relaxed text-sm"
-                  style={{
-                    fontFamily: 'var(--font-jetbrains-mono), monospace',
-                    color: '#e0e0ff',
-                    marginBottom: i < gameState.currentLyric!.split('\n').length - 1 ? '0.25em' : 0,
-                  }}
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-          )}
-          <BuzzerButton />
-        </>
+        <BuzzerButton />
       )}
 
       {gameState.phase === 'playing' && gameState.tiebreakerIds && !gameState.tiebreakerIds.includes(myId || '') && !isEliminated && (() => {

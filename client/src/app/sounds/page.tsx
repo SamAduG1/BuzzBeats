@@ -21,6 +21,7 @@ type SoundKey = typeof sounds[number]['key'];
 export default function SoundsPage() {
   const sfx = useSoundEffects();
   const [ambiencePlaying, setAmbiencePlaying] = useState(false);
+  const [ntlAmbiencePlaying, setNtlAmbiencePlaying] = useState(false);
 
   const play = (key: SoundKey) => {
     (sfx[key] as () => Promise<void>)().catch(() => {});
@@ -49,9 +50,10 @@ export default function SoundsPage() {
           <p style={{ color: '#8888aa' }}>Click each button to preview the sound effect.</p>
         </div>
 
-        {/* Lobby Ambience toggle — special treatment since it's stateful */}
+        {/* Ambient toggles */}
         <div>
           <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#444466', fontFamily: 'var(--font-orbitron), sans-serif' }}>Ambient</p>
+          <div className="flex flex-col gap-3">
           <button
             onClick={toggleAmbience}
             className="w-full text-left px-5 py-4 rounded-xl transition-all duration-150 active:scale-[0.98] cursor-pointer"
@@ -79,6 +81,44 @@ export default function SoundsPage() {
               </span>
             </div>
           </button>
+
+          {/* NTL Ambient toggle */}
+          <button
+            onClick={() => {
+              if (ntlAmbiencePlaying) {
+                sfx.stopNTLAmbience().catch(() => {});
+                setNtlAmbiencePlaying(false);
+              } else {
+                sfx.startNTLAmbience().catch(() => {});
+                setNtlAmbiencePlaying(true);
+              }
+            }}
+            className="w-full text-left px-5 py-4 rounded-xl transition-all duration-150 active:scale-[0.98] cursor-pointer"
+            style={{
+              background: ntlAmbiencePlaying ? 'rgba(0,240,255,0.08)' : '#12121a',
+              border: ntlAmbiencePlaying ? '1px solid rgba(0,240,255,0.5)' : '1px solid rgba(0,240,255,0.2)',
+              boxShadow: ntlAmbiencePlaying ? '0 0 20px rgba(0,240,255,0.15)' : 'none',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-base" style={{ fontFamily: 'var(--font-orbitron), sans-serif', color: '#00f0ff' }}>
+                  NTL Ambient (Option 2)
+                </p>
+                <p className="text-sm mt-0.5" style={{ color: '#8888aa' }}>
+                  {ntlAmbiencePlaying ? 'Playing — click to stop' : 'Music-box pentatonic — for Name That Lyric'}
+                </p>
+              </div>
+              <span className="text-xs px-3 py-1 rounded-full ml-4 shrink-0" style={{
+                background: ntlAmbiencePlaying ? 'rgba(0,240,255,0.2)' : 'rgba(255,255,255,0.05)',
+                color: ntlAmbiencePlaying ? '#00f0ff' : '#555577',
+                fontFamily: 'var(--font-orbitron), sans-serif',
+              }}>
+                {ntlAmbiencePlaying ? 'ON' : 'OFF'}
+              </span>
+            </div>
+          </button>
+          </div>
         </div>
 
         {/* One-shot sound effects */}

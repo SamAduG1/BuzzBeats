@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { ClientGameState } from '@shared/types/game';
 import Card from '@/components/ui/Card';
+import { useRoom } from '@/context/RoomContext';
 
 interface Props {
   gameState: ClientGameState;
 }
 
 export default function PlayingDisplay({ gameState }: Props) {
+  const { isHost, skipSong } = useRoom();
   const barRef = useRef<HTMLDivElement>(null);
   const [equalizerBars, setEqualizerBars] = useState<number[]>(Array(20).fill(0.5));
 
@@ -214,6 +216,19 @@ export default function PlayingDisplay({ gameState }: Props) {
       <p className="font-[family-name:var(--font-mono)] text-4xl text-neon-cyan">
         {gameState.timeRemaining}s
       </p>
+
+      {/* Host-only skip button — only during playing phase */}
+      {isHost && gameState.phase === 'playing' && (
+        <button
+          onClick={() => skipSong().catch(() => {})}
+          className="text-sm transition-all duration-150 active:scale-95 cursor-pointer"
+          style={{ color: '#555577', border: 'none', background: 'none' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#8888aa'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#555577'; }}
+        >
+          Skip song →
+        </button>
+      )}
 
       {/* Mini scoreboard */}
       {gameState.teamMode && gameState.teamScores ? (

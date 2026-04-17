@@ -935,6 +935,75 @@ export function useSoundEffects() {
     setTimeout(() => { lobbyAmbienceRef.current = null; }, 2200);
   }, [ensureRunning]);
 
+  // -------------------------------------------------------------------------
+  // NTL Ambient — sparse music-box pentatonic with slapback delay
+  // Designed for Name That Lyric's reading/thinking mood.
+  // C major pentatonic sine tones, long decay, 0.4s delay echo.
+  // -------------------------------------------------------------------------
+  const ntlAmbienceRef = useRef<{
+    intervalId: ReturnType<typeof setInterval>;
+    master: GainNode;
+  } | null>(null);
+
+  const startNTLAmbience = useCallback(async () => {
+    if (ntlAmbienceRef.current) return;
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 3.0);
+    master.connect(ctx.destination);
+
+    // Slapback delay for depth
+    const delayNode = ctx.createDelay(1.0);
+    delayNode.delayTime.setValueAtTime(0.4, ctx.currentTime);
+    const feedGain = ctx.createGain();
+    feedGain.gain.setValueAtTime(0.28, ctx.currentTime);
+    delayNode.connect(feedGain);
+    feedGain.connect(delayNode); // feedback loop
+    feedGain.connect(master);
+
+    // C major pentatonic across 2 octaves
+    const scale = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 659.25];
+    let scalePos = 0;
+
+    const tick = () => {
+      if (Math.random() > 0.5) return; // ~50% chance per tick for sparseness
+      const t = ctx.currentTime;
+      const freq = scale[scalePos % scale.length];
+      scalePos = (scalePos + Math.floor(Math.random() * 3 + 1)) % scale.length;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.32, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+      osc.connect(g);
+      g.connect(master);
+      g.connect(delayNode);
+      osc.start(t);
+      osc.stop(t + 2.3);
+    };
+
+    const intervalId = setInterval(tick, 650);
+    ntlAmbienceRef.current = { intervalId, master };
+  }, [ensureRunning]);
+
+  const stopNTLAmbience = useCallback(async () => {
+    const amb = ntlAmbienceRef.current;
+    if (!amb) return;
+    clearInterval(amb.intervalId);
+    ntlAmbienceRef.current = null;
+    const ctx = await ensureRunning();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    amb.master.gain.cancelScheduledValues(t);
+    amb.master.gain.setValueAtTime(amb.master.gain.value, t);
+    amb.master.gain.linearRampToValueAtTime(0, t + 2.0);
+  }, [ensureRunning]);
+
   return {
     playBuzzer,
     playCorrect,
@@ -949,5 +1018,7 @@ export function useSoundEffects() {
     startLobbyAmbience,
     stopLobbyAmbience,
     setLobbyAmbienceVolume,
+    startNTLAmbience,
+    stopNTLAmbience,
   };
 }

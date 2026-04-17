@@ -14,6 +14,7 @@ export interface ClientToServerEvents {
   'game:play-again': (callback: (response: GamePlayAgainResponse) => void) => void;
   'game:tiebreaker-vote': (data: TiebreakerVotePayload, callback: (response: TiebreakerVoteResponse) => void) => void;
   'game:tie-vote': (data: TieVotePayload, callback: (response: TieVoteResponse) => void) => void;
+  'game:skip-song': (callback: (response: SkipSongResponse) => void) => void;
   'room:kick-player': (data: KickPlayerPayload, callback: (response: KickPlayerResponse) => void) => void;
   'room:set-team-mode': (data: SetTeamModePayload, callback: (response: SetTeamModeResponse) => void) => void;
   'room:shuffle-teams': (callback: (response: ShuffleTeamsResponse) => void) => void;
@@ -230,6 +231,11 @@ export interface TiebreakerVoteResponse {
 }
 
 export interface MovePlayerTeamResponse {
+  success: boolean;
+  error?: string;
+}
+
+export interface SkipSongResponse {
   success: boolean;
   error?: string;
 }

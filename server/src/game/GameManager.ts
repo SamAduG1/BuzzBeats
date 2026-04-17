@@ -110,7 +110,7 @@ class GameManager {
       console.log(`[Game] Pool: ${filteredPool.length} songs after filters (genres: ${settings.genres.length || 'all'}, decades: ${settings.decades.length || 'all'})`);
 
       console.log(`[Game] Fetching ${songsNeeded} songs from iTunes...`);
-      songs = await fetchSongsForGame(filteredPool, songsNeeded);
+      songs = await fetchSongsForGame(filteredPool, songsNeeded + 5); // +5 skip buffer
 
       if (songs.length === 0) {
         return { success: false, error: 'Could not find any songs with previews' };
@@ -119,7 +119,7 @@ class GameManager {
       const filteredPool = filterSongs(songDatabase, settings);
       console.log(`[Game] Pool: ${filteredPool.length} songs after filters`);
       console.log(`[Game] Fetching lyrics for ${settings.roundCount} songs...`);
-      songs = await fetchSongsWithLyrics(filteredPool, settings.roundCount + 3); // +3 for tiebreaker buffer
+      songs = await fetchSongsWithLyrics(filteredPool, settings.roundCount + 8); // +3 tiebreaker + 5 skip buffer
 
       if (songs.length === 0) {
         return { success: false, error: 'Could not find any songs with lyrics. Try again or check your connection.' };
@@ -250,6 +250,46 @@ class GameManager {
     this.startTicking(game, roomCode, io, () => this.handleBuzzerTimeout(roomCode, io));
 
     return { accepted: true };
+  }
+
+  handleSkipSong(
+    roomCode: string,
+    hostSocketId: string,
+    io: GameIO
+  ): { success: boolean; error?: string } {
+    const game = this.games.get(roomCode);
+    if (!game) return { success: false, error: 'No active game' };
+    if (game.phase !== 'playing') return { success: false, error: 'Can only skip during the playing phase' };
+
+    const room = roomManager.getRoom(roomCode);
+    if (!room || room.hostSocketId !== hostSocketId) {
+      return { success: false, error: 'Only the host can skip' };
+    }
+
+    // currentRound is 0-indexed; need at least one more song beyond it
+    if (game.currentRound + 1 >= game.songs.length) {
+      return { success: false, error: 'No songs left in skip buffer' };
+    }
+
+    this.clearTimers(game);
+
+    // Remove the current song so the next one slides into its place
+    game.songs.splice(game.currentRound, 1);
+
+    // Reset round state
+    game.disqualifiedIds = [];
+    game.buzzedPlayerId = null;
+    game.buzzedPlayerName = null;
+    game.savedPlayingTime = null;
+
+    // Reset sub-round for Snippet mode
+    if (game.modeState.currentSubRound !== undefined) {
+      game.modeState.currentSubRound = 0;
+    }
+
+    console.log(`[Game] Host skipped song in room ${roomCode} (round ${game.currentRound + 1})`);
+    this.startPlaying(roomCode, io);
+    return { success: true };
   }
 
   handleAnswerSubmit(

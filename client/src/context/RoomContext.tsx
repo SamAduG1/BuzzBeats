@@ -44,6 +44,7 @@ interface RoomContextValue {
   movePlayerToTeam: (playerId: string, targetTeamId: number) => Promise<boolean>;
   voteTiebreaker: (votedForId: string) => Promise<boolean>;
   voteTie: (choice: 'sudden-death' | 'share') => Promise<boolean>;
+  skipSong: () => Promise<boolean>;
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null);
@@ -264,6 +265,14 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
     [socket]
   );
 
+  const skipSong = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      socket.emit('game:skip-song', (response) => {
+        resolve(response.success);
+      });
+    });
+  }, [socket]);
+
   const voteTiebreaker = useCallback(
     (votedForId: string): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -480,6 +489,7 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
         movePlayerToTeam,
         voteTiebreaker,
         voteTie,
+        skipSong,
       }}
     >
       {children}

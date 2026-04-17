@@ -26,6 +26,9 @@ export default function HostGameScreen() {
     playFanfare,
     playEliminationReveal,
     playLastChanceStinger,
+    startLobbyAmbience,
+    stopLobbyAmbience,
+    setLobbyAmbienceVolume,
   } = useSoundEffects();
   const prevPhaseRef = useRef<string | null>(null);
   const prevTimeRef = useRef<number | null>(null);
@@ -51,6 +54,11 @@ export default function HostGameScreen() {
       // New round starting — play from beginning
       if (songUrl) audio.play(songUrl);
 
+      // NTL has no audio preview — use lobby ambience at low volume as background
+      if (gameState.gameMode === 'name-that-lyric') {
+        startLobbyAmbience().then(() => setLobbyAmbienceVolume(0.18)).catch(() => {});
+      }
+
       // Snippet mode: fade audio during last 2 seconds of the clip
       if (gameState.gameMode === 'snippet' && gameState.clipDuration) {
         const fadeStart = Math.max(0, gameState.clipDuration - 2) * 1000;
@@ -61,7 +69,12 @@ export default function HostGameScreen() {
     } else if (phase === 'buzzing' && prevPhase === 'playing') {
       // Someone buzzed — pause (preserve position for resume)
       audio.pause();
-    } else if (phase === 'reveal') {
+    } else if (phase === 'reveal' || phase === 'scoreboard' || phase === 'pre-round') {
+      // Stop NTL background ambience when leaving the playing phase
+      stopLobbyAmbience().catch(() => {});
+    }
+
+    if (phase === 'reveal') {
       if (gameState.roundResult?.winnerId) {
         // Correct answer — resume briefly then fade out naturally
         audio.resume();

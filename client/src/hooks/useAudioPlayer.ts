@@ -3,9 +3,9 @@
 import { useRef, useCallback, useEffect } from 'react';
 
 interface AudioPlayer {
-  play: (url: string) => void;
+  play: (url: string) => Promise<void>;
   pause: () => void;
-  resume: () => void;
+  resume: () => Promise<void>;
   fadeOut: (durationMs?: number) => void;
   stop: () => void;
 }
@@ -17,20 +17,24 @@ export default function useAudioPlayer(): AudioPlayer {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const ensureContext = useCallback(() => {
+  const ensureContext = useCallback(async () => {
     if (!ctxRef.current) {
       ctxRef.current = new AudioContext();
       gainRef.current = ctxRef.current.createGain();
       gainRef.current.connect(ctxRef.current.destination);
     }
-    // Resume suspended context (browser autoplay policy)
     if (ctxRef.current.state === 'suspended') {
-      ctxRef.current.resume();
+      try { await ctxRef.current.resume(); } catch {}
     }
   }, []);
 
-  const play = useCallback((url: string) => {
-    ensureContext();
+  // Pre-warm AudioContext on mount so it's unblocked before the first round starts
+  useEffect(() => {
+    ensureContext().catch(() => {});
+  }, [ensureContext]);
+
+  const play = useCallback(async (url: string) => {
+    await ensureContext();
 
     // Clear any pending fade
     if (fadeTimerRef.current) {
@@ -67,8 +71,8 @@ export default function useAudioPlayer(): AudioPlayer {
     }
   }, []);
 
-  const resume = useCallback(() => {
-    ensureContext();
+  const resume = useCallback(async () => {
+    await ensureContext();
     // Reset gain to full before resuming
     if (gainRef.current && ctxRef.current) {
       gainRef.current.gain.cancelScheduledValues(ctxRef.current.currentTime);
