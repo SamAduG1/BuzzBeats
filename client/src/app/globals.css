@@ -169,3 +169,15 @@ body {
   animation: elim-drop-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   opacity: 0;
 }
+
+/* Skip song toast — slides in, holds, fades out */
+@keyframes skip-toast {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
+.animate-skip-toast {
+  animation: skip-toast 2s ease forwards;
+}

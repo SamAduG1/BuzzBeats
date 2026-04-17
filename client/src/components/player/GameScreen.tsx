@@ -17,6 +17,9 @@ export default function PlayerGameScreen() {
   const prevAnswerResultRef = useRef<typeof answerResult>(null);
   const [myTiebreakerVote, setMyTiebreakerVote] = useState<string | null>(null);
   const [myTieVote, setMyTieVote] = useState<'sudden-death' | 'share' | null>(null);
+  const [skipCount, setSkipCount] = useState(0);
+  const [showSkipToast, setShowSkipToast] = useState(false);
+  const skipToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useCountdownBeeps(gameState?.phase, gameState?.timeRemaining);
 
   // Tick during final 5 seconds of playing/buzzing (mirrors host screen)
@@ -37,6 +40,18 @@ export default function PlayerGameScreen() {
     if (gameState?.phase === 'tiebreaker') setMyTiebreakerVote(null);
     if (gameState?.phase === 'tie-vote') setMyTieVote(null);
   }, [gameState?.phase]);
+
+  // Show skip toast and bump skipCount (used to reset timer bar) when host skips
+  useEffect(() => {
+    const onSongSkipped = () => {
+      setSkipCount((c) => c + 1);
+      if (skipToastTimerRef.current) clearTimeout(skipToastTimerRef.current);
+      setShowSkipToast(true);
+      skipToastTimerRef.current = setTimeout(() => setShowSkipToast(false), 2000);
+    };
+    socket.on('game:song-skipped', onSongSkipped);
+    return () => { socket.off('game:song-skipped', onSongSkipped); };
+  }, [socket]);
 
   // Play sound when our answer result arrives
   useEffect(() => {
@@ -79,7 +94,7 @@ export default function PlayerGameScreen() {
       bar.style.transition = `width ${gameState.timeRemaining}s linear`;
       bar.style.width = '0%';
     }
-  }, [gameState?.phase, gameState?.subRound]);
+  }, [gameState?.phase, gameState?.subRound, skipCount]);
 
   if (!gameState) {
     return (
@@ -107,7 +122,25 @@ export default function PlayerGameScreen() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
+    <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto relative">
+      {/* Skip toast */}
+      {showSkipToast && (
+        <div
+          className="animate-skip-toast fixed top-5 left-1/2 z-50 pointer-events-none px-5 py-2.5 rounded-lg"
+          style={{
+            background: 'rgba(12, 12, 22, 0.92)',
+            border: '1px solid rgba(0, 240, 255, 0.5)',
+            color: '#00f0ff',
+            fontFamily: 'var(--font-orbitron), sans-serif',
+            fontSize: '0.65rem',
+            letterSpacing: '0.15em',
+            boxShadow: '0 0 20px rgba(0, 240, 255, 0.2)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          HOST SKIPPED · NEW SONG
+        </div>
+      )}
       {/* Round + score header — hidden during game-over */}
       {gameState.phase !== 'game-over' && (
         <div className="w-full flex items-center justify-between text-sm pt-6">

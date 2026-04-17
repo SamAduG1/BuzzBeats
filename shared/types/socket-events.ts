@@ -37,6 +37,7 @@ export interface ServerToClientEvents {
   'game:answer-result': (data: AnswerResultPayload) => void;
   'game:tick': (data: TickPayload) => void;
   'game:clip-info': (data: ClipInfoPayload) => void;
+  'game:song-skipped': () => void;
   'room:teams-updated': (data: TeamsUpdatedPayload) => void;
 }
 

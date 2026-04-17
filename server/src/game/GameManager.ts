@@ -288,6 +288,7 @@ class GameManager {
     }
 
     console.log(`[Game] Host skipped song in room ${roomCode} (round ${game.currentRound + 1})`);
+    io.to(roomCode).emit('game:song-skipped');
     this.startPlaying(roomCode, io);
     return { success: true };
   }
