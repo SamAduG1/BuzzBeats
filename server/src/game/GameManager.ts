@@ -41,6 +41,7 @@ interface ServerGameState {
   tiebreakerIds: string[];             // player IDs allowed to buzz in tiebreaker
   tiebreakerSongOffset: number;        // how many tiebreaker songs have been used
   tiebreakerVotes: Map<string, string>; // voterId → votedForId
+  songKey: number;                     // increments on every startPlaying call for reliable client bar resets
   tieVotes: Map<string, 'sudden-death' | 'share'>; // playerId → choice during tie-vote phase
   // Strategy pattern
   mode: GameMode;
@@ -169,6 +170,7 @@ class GameManager {
       tiebreakerIds: [],
       tiebreakerSongOffset: 0,
       tiebreakerVotes: new Map(),
+      songKey: 0,
       tieVotes: new Map(),
       timeRemaining: 0,
       savedPlayingTime: null,
@@ -430,6 +432,8 @@ class GameManager {
   private startPlaying(roomCode: string, io: GameIO): void {
     const game = this.games.get(roomCode);
     if (!game) return;
+
+    game.songKey += 1;
 
     const modeState = this.buildModeState(game);
     const roundStart = game.mode.onRoundStart(modeState);
@@ -1117,6 +1121,7 @@ class GameManager {
       tiebreakerVotes: (game.isTiebreaker || game.phase === 'game-over') && game.tiebreakerVotes.size > 0
         ? Object.fromEntries(game.tiebreakerVotes)
         : undefined,
+      songKey: game.songKey,
       ...modeClientState,
     };
 
@@ -1176,6 +1181,7 @@ class GameManager {
       quietCallout: game.quietCallout,
       isTiebreaker: game.isTiebreaker || undefined,
       tiebreakerIds: (game.isTiebreaker || game.phase === 'tie-vote') ? game.tiebreakerIds : undefined,
+      songKey: game.songKey,
       ...modeClientState,
     };
 

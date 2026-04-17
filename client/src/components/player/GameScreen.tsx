@@ -94,7 +94,7 @@ export default function PlayerGameScreen() {
       bar.style.transition = `width ${gameState.timeRemaining}s linear`;
       bar.style.width = '0%';
     }
-  }, [gameState?.phase, gameState?.subRound, songUrl, gameState?.currentLyric]);
+  }, [gameState?.phase, gameState?.subRound, gameState?.songKey]);
 
   if (!gameState) {
     return (

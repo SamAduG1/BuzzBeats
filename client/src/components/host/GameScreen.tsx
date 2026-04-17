@@ -141,7 +141,7 @@ export default function HostGameScreen() {
       return <PreRoundDisplay gameState={gameState} />;
     case 'playing':
     case 'buzzing':
-      return <PlayingDisplay gameState={gameState} songUrl={songUrl} />;
+      return <PlayingDisplay gameState={gameState} />;
     case 'sub-round-transition':
       return (
         <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 w-full">

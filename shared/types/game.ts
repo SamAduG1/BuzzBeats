@@ -85,6 +85,8 @@ export interface ClientGameState {
   eliminationSubMode?: 'last-one-standing' | 'fixed-rounds';
   // Name That Lyric fields
   currentLyric?: string | null;   // the lyric snippet displayed this round
+  // Song identity — increments every time a new song starts (including skips)
+  songKey?: number;
   // Team mode fields
   teamMode?: boolean;
   teams?: import('./team').Team[];
