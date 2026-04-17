@@ -11,7 +11,7 @@ import BuzzerButton from './BuzzerButton';
 import AnswerForm from './AnswerForm';
 
 export default function PlayerGameScreen() {
-  const { gameState, answerResult, socket, leaveRoom, voteTiebreaker, voteTie } = useRoom();
+  const { gameState, answerResult, socket, songUrl, leaveRoom, voteTiebreaker, voteTie } = useRoom();
   const { playCorrect, playWrong, playTick } = useSoundEffects();
   const barRef = useRef<HTMLDivElement>(null);
   const prevAnswerResultRef = useRef<typeof answerResult>(null);
@@ -94,7 +94,7 @@ export default function PlayerGameScreen() {
       bar.style.transition = `width ${gameState.timeRemaining}s linear`;
       bar.style.width = '0%';
     }
-  }, [gameState?.phase, gameState?.subRound, skipCount]);
+  }, [gameState?.phase, gameState?.subRound, songUrl, gameState?.currentLyric]);
 
   if (!gameState) {
     return (
