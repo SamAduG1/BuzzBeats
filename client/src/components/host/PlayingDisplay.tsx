@@ -7,9 +7,10 @@ import { useRoom } from '@/context/RoomContext';
 
 interface Props {
   gameState: ClientGameState;
+  songUrl?: string | null;
 }
 
-export default function PlayingDisplay({ gameState }: Props) {
+export default function PlayingDisplay({ gameState, songUrl }: Props) {
   const { isHost, skipSong } = useRoom();
   const barRef = useRef<HTMLDivElement>(null);
   const [equalizerBars, setEqualizerBars] = useState<number[]>(Array(20).fill(0.5));
@@ -49,7 +50,7 @@ export default function PlayingDisplay({ gameState }: Props) {
       bar.style.transition = `width ${gameState.timeRemaining}s linear`;
       bar.style.width = '0%';
     }
-  }, [gameState.phase, gameState.subRound]);
+  }, [gameState.phase, gameState.subRound, songUrl]);
 
   // Equalizer animation — only runs during playing phase for audio modes
   useEffect(() => {

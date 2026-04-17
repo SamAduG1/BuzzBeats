@@ -82,9 +82,8 @@ export default function HostGameScreen() {
 
     if (phase === 'reveal') {
       if (gameState.roundResult?.winnerId) {
-        // Correct answer — resume briefly then fade out naturally
-        audio.resume();
-        audio.fadeOut(4000);
+        // Correct answer — resume first, then fade (resume resets gain, must complete before scheduling ramp)
+        audio.resume().then(() => audio.fadeOut(4000)).catch(() => {});
         playCorrect().catch(() => {});
       } else {
         // No winner — stop cleanly
@@ -142,7 +141,7 @@ export default function HostGameScreen() {
       return <PreRoundDisplay gameState={gameState} />;
     case 'playing':
     case 'buzzing':
-      return <PlayingDisplay gameState={gameState} />;
+      return <PlayingDisplay gameState={gameState} songUrl={songUrl} />;
     case 'sub-round-transition':
       return (
         <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 w-full">
