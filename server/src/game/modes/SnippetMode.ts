@@ -29,7 +29,7 @@ export class SnippetMode implements GameMode {
   readonly displayName: string = 'Snippet Challenge';
   readonly config: ModeConfig = {
     usesAudio: true,
-    buzzingDuration: 15,
+    buzzingDuration: 30,
     preRoundDuration: 3,
     revealDuration: 5,
     scoreboardDuration: 5,

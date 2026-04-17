@@ -31,7 +31,7 @@ export class NameThatLyricMode implements GameMode {
   readonly displayName: string = 'Name That Lyric';
   readonly config: ModeConfig = {
     usesAudio: false,
-    buzzingDuration: 20,
+    buzzingDuration: 30,
     preRoundDuration: 3,
     revealDuration: 6,   // slightly longer — players want to read the lyric on reveal
     scoreboardDuration: 5,
