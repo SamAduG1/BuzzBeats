@@ -26,11 +26,11 @@ export default function HostGameScreen() {
     playFanfare,
     playEliminationReveal,
     playLastChanceStinger,
-    startLobbyAmbience,
-    stopLobbyAmbience,
-    setLobbyAmbienceVolume,
+    startNTLAmbience,
+    stopNTLAmbience,
   } = useSoundEffects();
   const prevPhaseRef = useRef<string | null>(null);
+  const prevSongUrlRef = useRef<string | null>(null);
   const prevTimeRef = useRef<number | null>(null);
   const clipFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,9 +54,9 @@ export default function HostGameScreen() {
       // New round starting — play from beginning
       if (songUrl) audio.play(songUrl);
 
-      // NTL has no audio preview — use lobby ambience at low volume as background
+      // NTL has no audio preview — use NTL ambience as background
       if (gameState.gameMode === 'name-that-lyric') {
-        startLobbyAmbience().then(() => setLobbyAmbienceVolume(0.18)).catch(() => {});
+        startNTLAmbience().catch(() => {});
       }
 
       // Snippet mode: fade audio during last 2 seconds of the clip
@@ -66,13 +66,19 @@ export default function HostGameScreen() {
           audio.fadeOut(2000);
         }, fadeStart);
       }
+    } else if (phase === 'playing' && prevPhase === 'playing' && songUrl && songUrl !== prevSongUrlRef.current) {
+      // Song skipped — phase didn't change but URL did, restart audio
+      audio.stop();
+      audio.play(songUrl);
     } else if (phase === 'buzzing' && prevPhase === 'playing') {
       // Someone buzzed — pause (preserve position for resume)
       audio.pause();
     } else if (phase === 'reveal' || phase === 'scoreboard' || phase === 'pre-round') {
-      // Stop NTL background ambience when leaving the playing phase
-      stopLobbyAmbience().catch(() => {});
+      // Stop NTL ambience when leaving the playing phase
+      stopNTLAmbience().catch(() => {});
     }
+
+    prevSongUrlRef.current = songUrl;
 
     if (phase === 'reveal') {
       if (gameState.roundResult?.winnerId) {

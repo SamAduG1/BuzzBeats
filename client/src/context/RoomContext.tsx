@@ -112,6 +112,9 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
             setRoom(newRoom);
             roomRef.current = newRoom;
             playerNameRef.current = displayName;
+            // Persist so page-refresh reconnect can rejoin automatically
+            sessionStorage.setItem('bb_room', response.room.code);
+            sessionStorage.setItem('bb_name', displayName);
             setIsHost(false);
             resolve(true);
           } else {
@@ -131,6 +134,8 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
     setGameState(null);
     setSongUrl(null);
     setAnswerResult(null);
+    sessionStorage.removeItem('bb_room');
+    sessionStorage.removeItem('bb_name');
   }, [socket]);
 
   const syncRoomState = useCallback(
@@ -343,6 +348,8 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
       setGameState(null);
       setSongUrl(null);
       setAnswerResult(null);
+      sessionStorage.removeItem('bb_room');
+      sessionStorage.removeItem('bb_name');
       setError('Room has been closed');
     };
 
@@ -357,6 +364,8 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
       setGameState(null);
       setSongUrl(null);
       setAnswerResult(null);
+      sessionStorage.removeItem('bb_room');
+      sessionStorage.removeItem('bb_name');
       setError(reason);
     };
 
@@ -380,13 +389,24 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
     };
   }, [socket]);
 
-  // On socket reconnect, re-join the room so we receive events again.
+  // On socket reconnect (or page refresh), re-join the room so we receive events again.
   // Socket.io reconnection assigns a new socket.id — the server won't route
   // game events to us until we re-subscribe to the room channel.
   useEffect(() => {
     const onConnect = () => {
-      const currentRoom = roomRef.current;
-      const name = playerNameRef.current;
+      let currentRoom = roomRef.current;
+      let name = playerNameRef.current;
+
+      // Page refresh clears in-memory refs — fall back to sessionStorage
+      if (!currentRoom || !name) {
+        const savedRoom = sessionStorage.getItem('bb_room');
+        const savedName = sessionStorage.getItem('bb_name');
+        if (savedRoom && savedName) {
+          name = savedName;
+          currentRoom = { code: savedRoom, players: [], status: 'lobby' };
+        }
+      }
+
       if (!currentRoom || !name) return; // not in a room, nothing to do
 
       console.log('[Socket] Reconnected — rejoining room', currentRoom.code);
@@ -402,6 +422,11 @@ export function RoomProvider({ children }: { children: React.ReactNode }) {
           };
           setRoom(updated);
           roomRef.current = updated;
+          playerNameRef.current = name;
+        } else {
+          // Room gone or player kicked — clear saved session so we don't loop
+          sessionStorage.removeItem('bb_room');
+          sessionStorage.removeItem('bb_name');
         }
       });
     };

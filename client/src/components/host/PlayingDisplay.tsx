@@ -221,12 +221,31 @@ export default function PlayingDisplay({ gameState }: Props) {
       {isHost && gameState.phase === 'playing' && (
         <button
           onClick={() => skipSong().catch(() => {})}
-          className="text-sm transition-all duration-150 active:scale-95 cursor-pointer"
-          style={{ color: '#555577', border: 'none', background: 'none' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#8888aa'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#555577'; }}
+          className="transition-all duration-150 active:scale-95 cursor-pointer"
+          style={{
+            fontFamily: 'var(--font-orbitron), sans-serif',
+            fontSize: '0.7rem',
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            color: '#00f0ff',
+            background: 'transparent',
+            border: '1px solid rgba(0, 240, 255, 0.3)',
+            borderRadius: '6px',
+            padding: '8px 24px',
+            boxShadow: '0 0 10px rgba(0, 240, 255, 0.08)',
+          }}
+          onMouseEnter={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            btn.style.borderColor = 'rgba(0, 240, 255, 0.7)';
+            btn.style.boxShadow = '0 0 18px rgba(0, 240, 255, 0.25)';
+          }}
+          onMouseLeave={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement;
+            btn.style.borderColor = 'rgba(0, 240, 255, 0.3)';
+            btn.style.boxShadow = '0 0 10px rgba(0, 240, 255, 0.08)';
+          }}
         >
-          Skip song →
+          Skip Song →
         </button>
       )}
 
