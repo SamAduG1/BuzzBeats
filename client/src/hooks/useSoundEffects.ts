@@ -936,9 +936,11 @@ export function useSoundEffects() {
   }, [ensureRunning]);
 
   // -------------------------------------------------------------------------
-  // NTL Ambient — sparse music-box pentatonic with slapback delay
-  // Designed for Name That Lyric's reading/thinking mood.
-  // C major pentatonic sine tones, long decay, 0.4s delay echo.
+  // NTL Ambient — "Cyberpunk Waiting Room"
+  // 120 BPM, Am pentatonic pizzicato synth + hip-hop drums.
+  // Plucked sawtooth/triangle → bandpass = marimba/pizzicato-string hybrid.
+  // Syncopated 2-bar melody loop, snare on 2&4, tight hi-hats.
+  // Subtle urgency without being distracting — game show waiting room energy.
   // -------------------------------------------------------------------------
   const ntlAmbienceRef = useRef<{
     intervalId: ReturnType<typeof setInterval>;
@@ -950,44 +952,126 @@ export function useSoundEffects() {
     const ctx = await ensureRunning();
     if (!ctx) return;
 
+    const BPM      = 120;
+    const SIXTEENTH = (60 / BPM) / 4; // 0.125s
+
     const master = ctx.createGain();
     master.gain.setValueAtTime(0, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 3.0);
+    master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 0.8);
     master.connect(ctx.destination);
 
-    // Slapback delay for depth
-    const delayNode = ctx.createDelay(1.0);
-    delayNode.delayTime.setValueAtTime(0.4, ctx.currentTime);
-    const feedGain = ctx.createGain();
-    feedGain.gain.setValueAtTime(0.28, ctx.currentTime);
-    delayNode.connect(feedGain);
-    feedGain.connect(delayNode); // feedback loop
-    feedGain.connect(master);
+    // Light compressor to glue everything
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.setValueAtTime(-18, ctx.currentTime);
+    comp.ratio.setValueAtTime(4, ctx.currentTime);
+    comp.connect(master);
 
-    // C major pentatonic across 2 octaves
-    const scale = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 659.25];
-    let scalePos = 0;
+    // ── Noise buffers ─────────────────────────────────────────────────────
+    const hatSize   = Math.floor(ctx.sampleRate * 0.04);
+    const hatBuf    = ctx.createBuffer(1, hatSize, ctx.sampleRate);
+    const hd        = hatBuf.getChannelData(0);
+    for (let i = 0; i < hatSize; i++) hd[i] = Math.random() * 2 - 1;
 
-    const tick = () => {
-      if (Math.random() > 0.5) return; // ~50% chance per tick for sparseness
-      const t = ctx.currentTime;
-      const freq = scale[scalePos % scale.length];
-      scalePos = (scalePos + Math.floor(Math.random() * 3 + 1)) % scale.length;
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
+    const snareSize = Math.floor(ctx.sampleRate * 0.10);
+    const snareBuf  = ctx.createBuffer(1, snareSize, ctx.sampleRate);
+    const sd        = snareBuf.getChannelData(0);
+    for (let i = 0; i < snareSize; i++) sd[i] = Math.random() * 2 - 1;
+
+    // ── Pizzicato/marimba pluck ────────────────────────────────────────────
+    // Sawtooth + detuned triangle → bandpass centred at 3× freq (bright pluck)
+    // Attack 3ms, decay 110ms — tight, staccato game-show pluck feel
+    const pizzo = (t: number, freq: number, vol = 0.38) => {
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      const bp = ctx.createBiquadFilter();
+      const g  = ctx.createGain();
+      o1.type = 'sawtooth'; o1.frequency.setValueAtTime(freq, t);
+      o2.type = 'triangle'; o2.frequency.setValueAtTime(freq * 1.004, t);
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(Math.min(freq * 3, 4000), t);
+      bp.Q.setValueAtTime(2.5, t);
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.32, t + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
-      osc.connect(g);
-      g.connect(master);
-      g.connect(delayNode);
-      osc.start(t);
-      osc.stop(t + 2.3);
+      g.gain.linearRampToValueAtTime(vol, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+      o1.connect(bp); o2.connect(bp); bp.connect(g); g.connect(comp);
+      o1.start(t); o2.start(t);
+      o1.stop(t + 0.13); o2.stop(t + 0.13);
     };
 
-    const intervalId = setInterval(tick, 650);
+    // ── Kick drum ─────────────────────────────────────────────────────────
+    const kick = (t: number, vol = 0.65) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(g); g.connect(comp);
+      osc.start(t); osc.stop(t + 0.25);
+    };
+
+    // ── Snare ─────────────────────────────────────────────────────────────
+    const snare = (t: number, vol = 0.30) => {
+      const src = ctx.createBufferSource();
+      src.buffer = snareBuf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.setValueAtTime(1500, t); bp.Q.setValueAtTime(0.8, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      src.connect(bp); bp.connect(g); g.connect(comp);
+      src.start(t); src.stop(t + 0.10);
+    };
+
+    // ── Hi-hat ────────────────────────────────────────────────────────────
+    const hihat = (t: number, vol: number) => {
+      const src = ctx.createBufferSource();
+      src.buffer = hatBuf;
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.setValueAtTime(9000, t);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+      src.connect(hp); hp.connect(g); g.connect(comp);
+      src.start(t); src.stop(t + 0.03);
+    };
+
+    // ── 2-bar Am-pentatonic melody (32 sixteenth steps) ───────────────────
+    // null = rest. Frequencies: A3=220, C4=261, D4=293, E4=329, G4=392, A4=440, C5=523
+    const mel: (number | null)[] = [
+      440,  null, 329,  null,  392,  329,  null,  261,   // bar 1 beats 1-2
+      null, 329,  220,  null,  293,  null,  329,  null,   // bar 1 beats 3-4
+      523,  null, 440,  329,   null, 392,  null,  293,   // bar 2 beats 1-2
+      261,  null, 329,  null,  220,  293,  null,  null,  // bar 2 beats 3-4
+    ];
+
+    // Hip-hop kick (syncopated — kick on 1, and a syncopated 16th before beat 3)
+    const kPat = [1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,0,  1,0,0,0, 0,0,1,0, 0,0,0,1, 0,0,0,0];
+    // Snare: beats 2 & 4 = steps 4,12,20,28
+    const sPat = [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0, 0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0];
+    // Hi-hats: 8th notes (every 2 steps), accented on downbeats
+    const hPat = [2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0, 2,0,1,0,2,0,1,0,2,0,1,0,2,0,1,0];
+
+    let step = 0;
+    let nextTime = ctx.currentTime + 0.05;
+    const LOOKAHEAD = 0.15;
+
+    const schedule = () => {
+      while (nextTime < ctx.currentTime + LOOKAHEAD) {
+        const s = step % 32;
+        const note = mel[s];
+        if (note !== null) pizzo(nextTime, note);
+        if (kPat[s]) kick(nextTime, s === 0 || s === 16 ? 0.65 : 0.42);
+        if (sPat[s]) snare(nextTime);
+        if (hPat[s]) hihat(nextTime, hPat[s] === 2 ? 0.11 : 0.055);
+        step++;
+        nextTime += SIXTEENTH;
+      }
+    };
+
+    schedule();
+    const intervalId = setInterval(schedule, 25);
     ntlAmbienceRef.current = { intervalId, master };
   }, [ensureRunning]);
 
